@@ -21,36 +21,7 @@ impl LibraryExplorer {
             genre_classification: HashMap::new(),
         }
     }
-
-    pub fn scan_book(
-        &mut self,
-        alpha_denominator: u32,
-        samples: u32,
-        rng: &mut impl Rng,
-    ) -> CosmicNarrative {
-        let target_alpha = 1.0 / (alpha_denominator as f64);
-        let mut best_narrative = CosmicNarrative {
-            story_quality: 0.0,
-            narrative_depth: 0,
-            dramatic_events: Vec::new(),
-            finale_type: "Silence".to_string(),
-            reproducibility: 0.0,
-        };
-
-        for _ in 0..samples {
-            let universe = self.generate_universe_at_alpha(target_alpha, rng);
-            let narrative = self.analyze_cosmic_narrative(&universe);
-
-            if narrative.story_quality > best_narrative.story_quality {
-                best_narrative = narrative;
-            }
-        }
-
-        self.books_scanned
-            .insert(alpha_denominator, best_narrative.clone());
-        best_narrative
-    }
-
+    
     pub fn generate_universe_at_alpha(&self, target_alpha: f64, rng: &mut impl Rng) -> CosmicLaw {
         // PREMISA 1: La Primacía de Alpha - derivamos e desde α fijo
         let random_c = C * rng.gen_range(0.5..2.0);
@@ -170,13 +141,10 @@ pub fn run_library_mode(
     let mut rng = thread_rng();
     let mut wtr = csv::Writer::from_path("cosmic_library.csv")?;
 
-    wtr.write_record(&[
-        "alpha_denominator",
-        "story_quality",
-        "narrative_depth",
-        "finale_type",
-        "reproducibility",
-        "dramatic_events_count",
+     wtr.write_record(&[
+        "alpha_denominator", "story_quality", "narrative_depth", "finale_type", "reproducibility", "dramatic_events_count",
+        "theoretical_proton_mass_kg", "theoretical_mass_diff_mev",
+        "jeans_mass_kg", "stellar_lifetime_years", "stellar_score"
     ])?;
 
     println!("📚 Explorando la Biblioteca Cósmica...");
@@ -188,33 +156,72 @@ pub fn run_library_mode(
     let mut masterpieces = Vec::new();
     let total_books = max_alpha - min_alpha + 1;
 
-    for alpha_denom in min_alpha..=max_alpha {
+for alpha_denom in min_alpha..=max_alpha {
         print!("📑 Leyendo libro α = 1/{}... ", alpha_denom);
 
-        let narrative = explorer.scan_book(alpha_denom, samples_per_book, &mut rng);
+        // NOTA: La lógica de `scan_book` se mueve aquí para tener acceso a los datos intermedios.
+        let target_alpha = 1.0 / (alpha_denom as f64);
+        let mut best_narrative = CosmicNarrative {
+            story_quality: 0.0,
+            narrative_depth: 0,
+            dramatic_events: Vec::new(),
+            finale_type: "Silence".to_string(),
+            reproducibility: 0.0,
+        };
+        
+        // DIAGNÓSTICO: Variables para almacenar los datos del mejor universo encontrado.
+        let mut best_diag_data = (0.0, 0.0, 0.0, 0.0, 0.0);
 
+        for _ in 0..samples_per_book {
+            let universe = explorer.generate_universe_at_alpha(target_alpha, &mut rng);
+            let narrative = explorer.analyze_cosmic_narrative(&universe);
+
+            if narrative.story_quality > best_narrative.story_quality {
+                best_narrative = narrative;
+                
+                // DIAGNÓSTICO: PASO 2 - Si encontramos un universo mejor, capturamos sus datos internos.
+                let engine = AdvancedPhysicsEngine::new(universe.clone());
+                let (p_mass, n_mass, _) = engine.get_theoretical_hadron_masses();
+                let mass_diff_mev = (n_mass - p_mass) / MEV_TO_KG;
+                let jeans_mass = engine.calculate_jeans_mass();
+                let lifetime_sec = engine.main_sequence_lifetime(jeans_mass);
+                let lifetime_years = if lifetime_sec > 0.0 { lifetime_sec / (31557600.0) } else { 0.0 }; // Segundos en un año
+                let stellar_score = engine.stellar_formation_epoch();
+                
+                best_diag_data = (p_mass, mass_diff_mev, jeans_mass, lifetime_years, stellar_score);
+            }
+        }
+        
+        explorer.books_scanned.insert(alpha_denom, best_narrative.clone());
+        
+        // DIAGNÓSTICO: PASO 3 - Escribir la fila del CSV con los datos narrativos y de diagnóstico.
         wtr.write_record(&[
             alpha_denom.to_string(),
-            format!("{:.6}", narrative.story_quality),
-            narrative.narrative_depth.to_string(),
-            narrative.finale_type.clone(),
-            format!("{:.6}", narrative.reproducibility),
-            narrative.dramatic_events.len().to_string(),
+            format!("{:.6}", best_narrative.story_quality),
+            best_narrative.narrative_depth.to_string(),
+            best_narrative.finale_type.clone(),
+            format!("{:.6}", best_narrative.reproducibility),
+            best_narrative.dramatic_events.len().to_string(),
+            format!("{:e}", best_diag_data.0), // theoretical_proton_mass_kg
+            format!("{:e}", best_diag_data.1), // theoretical_mass_diff_mev
+            format!("{:e}", best_diag_data.2), // jeans_mass_kg
+            format!("{:e}", best_diag_data.3), // stellar_lifetime_years
+            format!("{:.6}", best_diag_data.4),  // stellar_score
         ])?;
 
-        if narrative.story_quality > 0.8 {
-            masterpieces.push((alpha_denom, narrative.story_quality));
-            println!("✨ ¡OBRA MAESTRA! Calidad: {:.4}", narrative.story_quality);
-        } else if narrative.story_quality > 0.5 {
+        if best_narrative.story_quality > 0.8 {
+            masterpieces.push((alpha_denom, best_narrative.story_quality));
+            println!("✨ ¡OBRA MAESTRA! Calidad: {:.4}", best_narrative.story_quality);
+        } else if best_narrative.story_quality > 0.5 {
             println!(
                 "📝 Historia interesante. Calidad: {:.4}",
-                narrative.story_quality
+                best_narrative.story_quality
             );
         } else {
             println!("📄 Historia simple.");
         }
 
-        if alpha_denom % 100 == 0 {
+        if alpha_denom % 100 == 0 && alpha_denom > min_alpha {
             let progress = (alpha_denom - min_alpha) as f64 / total_books as f64 * 100.0;
             println!(
                 "📊 Progreso: {:.1}% - {} obras maestras encontradas",
@@ -223,7 +230,6 @@ pub fn run_library_mode(
             );
         }
     }
-
     wtr.flush()?;
 
     // Clasificar géneros
@@ -252,3 +258,4 @@ pub fn run_library_mode(
 
     Ok(())
 }
+

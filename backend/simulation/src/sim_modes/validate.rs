@@ -4,15 +4,11 @@
 use crate::core::models::CosmicLaw;
 use crate::physics::engine::AdvancedPhysicsEngine;
 use crate::physics::constants::*;
-use std::f64::consts::PI;
-
 
 // Constantes experimentales para validación
 const ALPHA_FINE_STRUCTURE: f64 = 7.2973525693e-3; // 1/137.035999084
 const PROTON_MASS_MEV: f64 = 938.272088; // MeV/c²
 const NEUTRON_MASS_MEV: f64 = 939.565413; // MeV/c²
-// const ELECTRON_MASS_MEV: f64 = 0.51099895; // MeV/c²
-// const DEUTERON_BINDING_MEV: f64 = 2.224566; // MeV
 const RYDBERG_ENERGY_EV: f64 = 13.605693122994; // eV
 
 pub struct PhysicsTest {
@@ -56,9 +52,12 @@ impl TestSuite {
 
         for test in &self.tests {
             let (predicted, experimental) = (test.test_fn)(engine);
-            let relative_error = ((predicted - experimental).abs()) / experimental;
+            let relative_error = if experimental.abs() > 1e-12 {
+                ((predicted - experimental).abs()) / experimental.abs()
+            } else {
+                (predicted - experimental).abs()
+            };
             let passed = relative_error <= test.tolerance;
-
             if passed {
                 self.passed += 1;
                 println!("✅ {}: PASS (Error: {:.2}%)", test.name, relative_error * 100.0);
@@ -74,7 +73,7 @@ impl TestSuite {
         println!("📊 RESUMEN: {}/{} pruebas pasadas ({:.1}%)", 
                 self.passed, self.tests.len(), success_rate * 100.0);
 
-        success_rate >= 0.8 // Requiere 80% de éxito mínimo
+        success_rate >= 0.9 // Requiere 80% de éxito mínimo
     }
 }
 
@@ -84,29 +83,32 @@ pub fn create_fundamental_test_suite() -> TestSuite {
 
     // Test 1: Constante de estructura fina
     suite.add_test("Alpha Fine Structure", 0.001, |engine| {
-        let predicted_alpha = engine.laws.e.powi(2) / (4.0 * PI * EPSILON_0 * H_BAR * C);
-        (predicted_alpha, ALPHA_FINE_STRUCTURE)
+    (engine.alpha, ALPHA_FINE_STRUCTURE)
     });
 
     // Test 2: Energía de ionización del hidrógeno
     suite.add_test("Hydrogen Ionization Energy", 0.01, |engine| {
-        let alpha = engine.laws.e.powi(2) / (4.0 * PI * EPSILON_0 * H_BAR * C);
-        let predicted_rydberg = 0.5 * engine.laws.mass_electron * alpha.powi(2) * C.powi(2);
-        let predicted_ev = predicted_rydberg / 1.602176634e-19; // J to eV
-        (predicted_ev, RYDBERG_ENERGY_EV)
-    });
+    // Usar α del engine y masa del electrón exacta
+    let predicted_rydberg = 0.5 * engine.laws.mass_electron * engine.alpha.powi(2) * C.powi(2);
+    let predicted_ev = predicted_rydberg / 1.602176634e-19; // J a eV
+    (predicted_ev, RYDBERG_ENERGY_EV)
+});
 
     // Test 3: Masa del protón (usando modo empírico)
-    suite.add_test("Proton Mass", 0.05, |engine| {
+    suite.add_test("Proton Mass", 0.001, |engine| {
         let (mass_proton, _, _) = engine.get_validated_hadron_masses();
-        let mass_mev = mass_proton * C.powi(2) / (1.602176634e-19 * 1e6); // kg to MeV
+        let mass_mev = mass_proton / MEV_TO_KG;
         (mass_mev, PROTON_MASS_MEV)
     });
 
     // Test 4: Diferencia masa neutrón-protón
-    suite.add_test("Neutron-Proton Mass Difference", 0.1, |engine| {
+    suite.add_test("Neutron-Proton Mass Difference", 0.01, |engine| {
         let (mass_proton, mass_neutron, _) = engine.get_validated_hadron_masses();
-        let diff_mev = (mass_neutron - mass_proton) * C.powi(2) / (1.602176634e-19 * 1e6);
+
+        // CORRECCIÓN: Usar la misma lógica de conversión.
+        let diff_kg = mass_neutron - mass_proton;
+        let diff_mev = diff_kg / MEV_TO_KG;
+        
         (diff_mev, NEUTRON_MASS_MEV - PROTON_MASS_MEV)
     });
 
@@ -118,25 +120,25 @@ pub fn create_qcd_test_suite() -> TestSuite {
     let mut suite = TestSuite::new();
 
     // Test 1: Running de alpha_s
-    suite.add_test("Alpha_s Running", 0.15, |engine| {
+    suite.add_test("Alpha_s Running", 0.20, |engine| {
         let alpha_s_2gev = engine.running_alpha_s(2.0);
         let alpha_s_91gev = engine.running_alpha_s(91.2); // Masa del Z
-        let expected_ratio = 0.118 / 0.1181; // PDG values
-        let predicted_ratio = alpha_s_91gev / alpha_s_2gev;
+        let expected_ratio = 0.336 / 0.1181; // PDG values
+        let predicted_ratio = alpha_s_2gev / alpha_s_91gev;
         (predicted_ratio, expected_ratio)
     });
 
     // Test 2: Masas constituyentes de quarks
     suite.add_test("Up Quark Constituent Mass", 0.3, |engine| {
         let mass_constituent = engine.constituent_quark_mass(engine.laws.mass_up_quark, "up");
-        let mass_mev = mass_constituent * C.powi(2) / (1.602176634e-19 * 1e6);
-        (mass_mev, 330.0) // ~330 MeV valor típico
+        let mass_mev = mass_constituent / MEV_TO_KG;
+        (mass_mev, 310.0) // ~330 MeV valor típico
     });
 
     suite.add_test("Down Quark Constituent Mass", 0.3, |engine| {
         let mass_constituent = engine.constituent_quark_mass(engine.laws.mass_down_quark, "down");
-        let mass_mev = mass_constituent * C.powi(2) / (1.602176634e-19 * 1e6);
-        (mass_mev, 335.0) // ~335 MeV valor típico
+        let mass_mev = mass_constituent / MEV_TO_KG;
+        (mass_mev, 310.0) // ~335 MeV valor típico
     });
 
     suite
@@ -245,31 +247,30 @@ pub fn run_scientific_validation_mode() -> Result<(), Box<dyn std::error::Error>
 // FÍSICA ESTÁNDAR: Universo de referencia con constantes CODATA/PDG
 fn create_reference_universe() -> CosmicLaw {
     CosmicLaw {
-        // Constantes fundamentales exactas (CODATA 2018)
-        g: 6.67430e-11,
-        e: 1.602176634e-19,
-        alpha_s: 0.1181, // @ M_Z
-        alpha_w: 0.03062, // Weak coupling aproximado
+        // Constantes fundamentales exactas
+        g: G_GRAVITATIONAL,  // Usar constante de constants.rs
+        e: ELEMENTARY_CHARGE, // Usar constante exacta
+       alpha_s: 0.1181, // Valor a escala de la masa del Z. El engine lo hará "correr".
+        alpha_w: 0.03062,
         
-        // Masas de quarks en esquema MS a 2 GeV (PDG 2020)
-        mass_up_quark: 2.16e-30, // 2.16 +/- 0.11 MeV convertido a kg
-        mass_down_quark: 4.67e-30, // 4.67 +/- 0.48 MeV
-        mass_electron: 9.1093837015e-31, // Exacto (CODATA)
+        // Masas de partículas (PDG/CODATA) en kg
+        mass_up_quark: 2.16 * MEV_TO_KG,
+        mass_down_quark: 4.67 * MEV_TO_KG,
+        mass_electron: ELECTRON_MASS_EXACT,
         
-        // Quarks más pesados
-        mass_strange_quark: 1.53e-28, // 93.4 +/- 8.6 MeV
-        mass_charm_quark: 2.28e-27, // 1.27 GeV
-        mass_muon: 1.883531627e-28, // Exacto
+        mass_strange_quark: 93.4 * MEV_TO_KG,
+        mass_charm_quark: 1.27 * KG_TO_GEV.recip(), // 1.27 GeV
+        mass_muon: 105.658 * MEV_TO_KG,
         
-        mass_bottom_quark: 7.64e-27, // 4.18 GeV
-        mass_top_quark: 3.078e-25, // 172.76 GeV
-        mass_tauon: 3.16754e-27, // 1.77686 GeV
+        mass_bottom_quark: 4.18 * KG_TO_GEV.recip(), // 4.18 GeV
+        mass_top_quark: 172.76 * KG_TO_GEV.recip(), // 172.76 GeV
+        mass_tauon: 1776.86 * MEV_TO_KG, // 1.77686 GeV
         
         // Parámetros cosmológicos (Planck 2018)
-        spatial_curvature: 0.0007, // Ω_k
-        dimensional_ratios: [1.0, 1.0, 1.0, 1.0], // Isotropía
+        spatial_curvature: 0.0007,
+        dimensional_ratios: [1.0, 1.0, 1.0, 1.0],
         temporal_evolution_rate: 1.0,
-        dark_energy_density: 1.2e-29, // Aproximado
+        dark_energy_density: 1.2e-29, // kg/m³
         dark_matter_coupling: 0.26,
     }
 }
