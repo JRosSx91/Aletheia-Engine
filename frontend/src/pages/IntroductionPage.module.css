@@ -1,0 +1,67 @@
+.container {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.scrollArea {
+  position: relative;
+  width: 100%;
+  height: 500vh;
+}
+
+.canvas {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+}
+.textOverlay {
+  /* Mantenemos el overlay simple */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  font-family: "Inter", sans-serif;
+  color: #c4f5fc;
+  text-shadow: 0 0 5px rgba(0, 191, 255, 0.5);
+  border: 2px solid red;
+}
+.textSection {
+  /* Posicionamiento absoluto relativo al contenedor de scroll */
+  position: absolute;
+  /* El centrado que SÍ funciona porque es matemático y no depende del layout del padre */
+  left: 50%;
+  transform: translateX(-50%);
+
+  /* Estilos de texto */
+  width: 90%; /* Ancho relativo para responsiveness */
+  max-width: 600px;
+  padding: 0 1rem;
+  margin: 0;
+  text-align: center;
+  font-family: "Inter", sans-serif;
+  color: #c4f5fc;
+  text-shadow: 0 0 8px rgba(0, 191, 255, 0.6);
+}
+
+/* Podemos tener estilos específicos si queremos */
+.textSection h1 {
+  font-size: 2.5rem;
+}
+
+.textSection h2 {
+  font-size: 2rem;
+  font-weight: 400;
+  margin-bottom: 1rem;
+  color: #f0f8ff;
+}
+
+.textSection p {
+  font-size: 1.2rem;
+  line-height: 1.6;
+  font-weight: 300;
+  margin-bottom: 1rem;
+}
