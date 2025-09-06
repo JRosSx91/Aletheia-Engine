@@ -1,0 +1,98 @@
+# #################### #
+# # GENERAL          #
+# #################### #
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# #################### #
+# # NODE & FRONTEND  #
+# #################### #
+
+# Dependencies & Build output
+/node_modules
+/dist
+/dist-ssr
+/build
+/.temp
+/.tmp
+.npm
+.yarn
+
+# Environment variables
+.env
+.env.*
+*.local
+
+# Test & Coverage
+/coverage
+/.nyc_output
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+
+# #################### #
+# # RUST & BACKEND   #
+# #################### #
+
+# Rust build artifacts
+/target
+
+# Simulation data output
+# (Mantenemos esto para evitar subir accidentalmente grandes CSVs)
+/data/
+*.csv
+*.html
+
+
+# #################### #
+# # IDE & EDITORS    #
+# #################### #
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# JetBrains (IntelliJ, WebStorm, etc.)
+.idea/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Other
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.project
+.classpath
+.c9/
+*.launch
+.settings/

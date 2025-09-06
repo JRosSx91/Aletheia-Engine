@@ -1,0 +1,12 @@
+{
+  "name": "aletheia-engine",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend:knowledge": "pnpm --filter backend_knowledge dev",
+    "build:frontend": "pnpm --filter frontend build"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
