@@ -3,7 +3,7 @@
 import { createBrowserRouter } from "react-router-dom";
 import { Layout } from "../layouts/Layout";
 import { GraphVisualizerPage } from "../pages/GraphVisualizerPage";
-import { IntroductionPage } from "../pages/IntroductionPage";
+import AletheiaAvatar from "../components/AletheiaAvatar";
 
 export const router = createBrowserRouter([
   {
@@ -14,7 +14,7 @@ export const router = createBrowserRouter([
       // La hemos puesto como la ruta principal por ahora para facilitar el desarrollo.
       {
         index: true, // `index: true` la designa como la página por defecto para "/".
-        element: <IntroductionPage />,
+        element: <AletheiaAvatar />,
       },
       // Ruta para la página original del visualizador de grafos.
       {

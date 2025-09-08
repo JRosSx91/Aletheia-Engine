@@ -13,5 +13,6 @@ declare module "@react-three/fiber" {
     quantumFieldMaterial: Object3DNode<ShaderMaterial, typeof ShaderMaterial>;
     metamorphosisMaterial: Object3DNode<ShaderMaterial, typeof ShaderMaterial>;
     landscapeMaterial: Object3DNode<ShaderMaterial, typeof ShaderMaterial>;
+    neuralFluidMaterial: Object3DNode<ShaderMaterial, typeof ShaderMaterial>;
   }
 }

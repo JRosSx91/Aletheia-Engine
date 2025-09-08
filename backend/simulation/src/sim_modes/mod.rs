@@ -5,3 +5,4 @@ pub mod harmonic;
 pub mod library;
 pub mod map;
 pub mod validate;
+pub mod stream;
