@@ -55,6 +55,7 @@ enum Commands {
         samples: u32,
     },
     Validate,
+    Stream,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -77,6 +78,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         } => {sim_modes::alpha_fixed::run_alpha_fixed_mode(*alpha_denominator, *samples)?},
         Commands::Geometric { samples } => {sim_modes::geometric::run_geometric_mode(*samples)?},
         Commands::Validate => sim_modes::validate::run_scientific_validation_mode()?,
+        Commands::Stream => sim_modes::stream::run_streaming_mode()?,
     }
 
     Ok(())
