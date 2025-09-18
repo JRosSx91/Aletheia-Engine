@@ -32,7 +32,6 @@ pub fn run_alpha_fixed_mode(alpha_denominator: u32, samples: u32) -> Result<(), 
     let mut best_universe = None;
 
     for sample_id in 0..samples {
-        // Generar constantes aleatorias y derivar e
         let c_variant = C * rng.gen_range(0.1..10.0);
         let hbar_variant = H_BAR * rng.gen_range(0.1..10.0);
         let epsilon0_variant = EPSILON_0 * rng.gen_range(0.1..10.0);

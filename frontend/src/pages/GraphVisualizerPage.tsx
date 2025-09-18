@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useGraphData } from "../hooks/useGraphData";
 import { animate, createScope, stagger } from "animejs";
-import { AletheiaScene } from "../components/Aletheia_old/AletheiaScene";
 
 export function GraphVisualizerPage() {
   const { t } = useTranslation();
@@ -35,7 +34,6 @@ export function GraphVisualizerPage() {
 
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
-      <AletheiaScene />
 
       <div
         style={{

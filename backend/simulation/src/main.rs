@@ -33,7 +33,6 @@ enum Commands {
         #[arg(short, long, default_value_t = 10000)]
         samples: u32,
     },
-    /// NUEVO: Explorar la biblioteca cósmica sistemáticamente
     Library {
         #[arg(short, long, default_value_t = 1)]
         min_alpha: u32,
@@ -42,14 +41,12 @@ enum Commands {
         #[arg(short, long, default_value_t = 100)]
         samples_per_book: u32,
     },
-    /// NUEVO: Modo de análisis con alpha fijo (Primacía de Alpha)
     AlphaFixed {
         #[arg(short, long, default_value_t = 137)]
         alpha_denominator: u32,
         #[arg(short, long, default_value_t = 10000)]
         samples: u32,
     },
-    /// NUEVO: Análisis geométrico de universos
     Geometric {
         #[arg(short, long, default_value_t = 5000)]
         samples: u32,

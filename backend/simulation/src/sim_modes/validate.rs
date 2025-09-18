@@ -1,11 +1,8 @@
-// FÍSICA ESTÁNDAR: Pruebas unitarias contra datos experimentales conocidos
-// Cada test debe pasarse antes de proceder al siguiente nivel de complejidad
 
 use crate::core::models::CosmicLaw;
 use crate::physics::engine::AdvancedPhysicsEngine;
 use crate::physics::constants::*;
 
-// Constantes experimentales para validación
 const ALPHA_FINE_STRUCTURE: f64 = 7.2973525693e-3; // 1/137.035999084
 const PROTON_MASS_MEV: f64 = 938.272088; // MeV/c²
 const NEUTRON_MASS_MEV: f64 = 939.565413; // MeV/c²
@@ -73,39 +70,32 @@ impl TestSuite {
         println!("📊 RESUMEN: {}/{} pruebas pasadas ({:.1}%)", 
                 self.passed, self.tests.len(), success_rate * 100.0);
 
-        success_rate >= 0.9 // Requiere 80% de éxito mínimo
+        success_rate >= 0.9 
     }
 }
 
-// FÍSICA ESTÁNDAR: Tests fundamentales que DEBEN pasar
 pub fn create_fundamental_test_suite() -> TestSuite {
     let mut suite = TestSuite::new();
 
-    // Test 1: Constante de estructura fina
     suite.add_test("Alpha Fine Structure", 0.001, |engine| {
     (engine.alpha, ALPHA_FINE_STRUCTURE)
     });
 
-    // Test 2: Energía de ionización del hidrógeno
     suite.add_test("Hydrogen Ionization Energy", 0.01, |engine| {
-    // Usar α del engine y masa del electrón exacta
     let predicted_rydberg = 0.5 * engine.laws.mass_electron * engine.alpha.powi(2) * C.powi(2);
     let predicted_ev = predicted_rydberg / 1.602176634e-19; // J a eV
     (predicted_ev, RYDBERG_ENERGY_EV)
 });
 
-    // Test 3: Masa del protón (usando modo empírico)
     suite.add_test("Proton Mass", 0.001, |engine| {
         let (mass_proton, _, _) = engine.get_validated_hadron_masses();
         let mass_mev = mass_proton / MEV_TO_KG;
         (mass_mev, PROTON_MASS_MEV)
     });
 
-    // Test 4: Diferencia masa neutrón-protón
     suite.add_test("Neutron-Proton Mass Difference", 0.01, |engine| {
         let (mass_proton, mass_neutron, _) = engine.get_validated_hadron_masses();
 
-        // CORRECCIÓN: Usar la misma lógica de conversión.
         let diff_kg = mass_neutron - mass_proton;
         let diff_mev = diff_kg / MEV_TO_KG;
         
@@ -115,20 +105,17 @@ pub fn create_fundamental_test_suite() -> TestSuite {
     suite
 }
 
-// FÍSICA ESTÁNDAR: Tests de QCD que requieren calibración más cuidadosa
 pub fn create_qcd_test_suite() -> TestSuite {
     let mut suite = TestSuite::new();
 
-    // Test 1: Running de alpha_s
     suite.add_test("Alpha_s Running", 0.20, |engine| {
         let alpha_s_2gev = engine.running_alpha_s(2.0);
-        let alpha_s_91gev = engine.running_alpha_s(91.2); // Masa del Z
+        let alpha_s_91gev = engine.running_alpha_s(91.2);
         let expected_ratio = 0.336 / 0.1181; // PDG values
         let predicted_ratio = alpha_s_2gev / alpha_s_91gev;
         (predicted_ratio, expected_ratio)
     });
 
-    // Test 2: Masas constituyentes de quarks
     suite.add_test("Up Quark Constituent Mass", 0.3, |engine| {
         let mass_constituent = engine.constituent_quark_mass(engine.laws.mass_up_quark, "up");
         let mass_mev = mass_constituent / MEV_TO_KG;
@@ -144,12 +131,10 @@ pub fn create_qcd_test_suite() -> TestSuite {
     suite
 }
 
-// FÍSICA ESTÁNDAR: Tests cosmológicos
 pub fn create_cosmology_test_suite() -> TestSuite {
     let mut suite = TestSuite::new();
 
     suite.add_test("Universe Age", 0.2, |engine| {
-        // Test simplificado: solo orden de magnitud
         let viability = engine.cosmological_viability();
         if viability > 0.5 {
             let age_estimate = 4.35e17; // Asumimos que el modelo converge a ~13.8 Gyr
@@ -162,11 +147,9 @@ pub fn create_cosmology_test_suite() -> TestSuite {
     suite
 }
 
-// Test integrado de validación por niveles
 pub fn run_tiered_validation(engine: &AdvancedPhysicsEngine) -> ValidationLevel {
     println!("\n🎯 VALIDACIÓN POR NIVELES DE COMPLEJIDAD");
     
-    // Nivel 1: Tests fundamentales
     println!("\n📌 NIVEL 1: Física Atómica Fundamental");
     let mut fundamental_suite = create_fundamental_test_suite();
     let level1_pass = fundamental_suite.run_all_tests(engine);
@@ -175,7 +158,6 @@ pub fn run_tiered_validation(engine: &AdvancedPhysicsEngine) -> ValidationLevel 
         return ValidationLevel::Failed("Física atómica fundamental");
     }
     
-    // Nivel 2: Tests de QCD
     println!("\n📌 NIVEL 2: Cromodinámica Cuántica");
     let mut qcd_suite = create_qcd_test_suite();
     let level2_pass = qcd_suite.run_all_tests(engine);
@@ -184,7 +166,6 @@ pub fn run_tiered_validation(engine: &AdvancedPhysicsEngine) -> ValidationLevel 
         return ValidationLevel::Partial("QCD requiere calibración");
     }
     
-    // Nivel 3: Tests cosmológicos
     println!("\n📌 NIVEL 3: Cosmología");
     let mut cosmo_suite = create_cosmology_test_suite();
     let level3_pass = cosmo_suite.run_all_tests(engine);
@@ -204,27 +185,16 @@ pub enum ValidationLevel {
 }
 
 impl ValidationLevel {
-    /* pub fn allows_exploration(&self) -> bool {
-        match self {
-            ValidationLevel::Failed(_) => false,
-            ValidationLevel::Partial(_) => true,  // Permitir con precaución
-            ValidationLevel::Full => true,
-        }
-    } */
 }
 
-// Función principal de validación científica
 pub fn run_scientific_validation_mode() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔬 INICIANDO VALIDACIÓN CIENTÍFICA RIGUROSA");
     
-    // Crear universo de referencia con constantes conocidas
     let reference_universe = create_reference_universe();
     let engine = AdvancedPhysicsEngine::new(reference_universe);
     
-    // Ejecutar validación por niveles
     let validation_result = run_tiered_validation(&engine);
     
-    // Evaluar resultado
     match validation_result {
         ValidationLevel::Full => {
             println!("\n🌟 VALIDACIÓN COMPLETA: Motor físico listo para exploración");
@@ -244,16 +214,13 @@ pub fn run_scientific_validation_mode() -> Result<(), Box<dyn std::error::Error>
     Ok(())
 }
 
-// FÍSICA ESTÁNDAR: Universo de referencia con constantes CODATA/PDG
 fn create_reference_universe() -> CosmicLaw {
     CosmicLaw {
-        // Constantes fundamentales exactas
         g: G_GRAVITATIONAL,  // Usar constante de constants.rs
         e: ELEMENTARY_CHARGE, // Usar constante exacta
        alpha_s: 0.1181, // Valor a escala de la masa del Z. El engine lo hará "correr".
         alpha_w: 0.03062,
         
-        // Masas de partículas (PDG/CODATA) en kg
         mass_up_quark: 2.16 * MEV_TO_KG,
         mass_down_quark: 4.67 * MEV_TO_KG,
         mass_electron: ELECTRON_MASS_EXACT,
@@ -266,7 +233,6 @@ fn create_reference_universe() -> CosmicLaw {
         mass_top_quark: 172.76 * KG_TO_GEV.recip(), // 172.76 GeV
         mass_tauon: 1776.86 * MEV_TO_KG, // 1.77686 GeV
         
-        // Parámetros cosmológicos (Planck 2018)
         spatial_curvature: 0.0007,
         dimensional_ratios: [1.0, 1.0, 1.0, 1.0],
         temporal_evolution_rate: 1.0,

@@ -82,7 +82,6 @@ export interface RayParameters {
     childSubray: LightningSubray,
     lightningStrike: LightningStrike
   ) => void;
-  // Propiedad que la clase añade internamente
   maxSubrays?: number;
 }
 

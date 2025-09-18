@@ -1,24 +1,19 @@
-// src/router/AppRouter.tsx
-
 import { createBrowserRouter } from "react-router-dom";
 import { Layout } from "../layouts/Layout";
 import { GraphVisualizerPage } from "../pages/GraphVisualizerPage";
-import AletheiaAvatar from "../components/AletheiaAvatar";
+import { AletheiaAvatarPage } from "../pages/AletheiaAvatarPage"; // <-- Importamos la nueva página
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <Layout />,
     children: [
-      // Ruta para la nueva página de introducción.
-      // La hemos puesto como la ruta principal por ahora para facilitar el desarrollo.
       {
-        index: true, // `index: true` la designa como la página por defecto para "/".
-        element: <AletheiaAvatar />,
+        index: true,
+        element: <AletheiaAvatarPage />, // <-- Usamos la nueva página aquí
       },
-      // Ruta para la página original del visualizador de grafos.
       {
-        path: "graph", // Se accederá a través de la URL "/graph"
+        path: "graph",
         element: <GraphVisualizerPage />,
       },
     ],

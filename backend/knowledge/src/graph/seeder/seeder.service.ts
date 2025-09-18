@@ -28,7 +28,6 @@ export class SeederService implements OnModuleInit {
       return;
     }
 
-    // 2. Crear los Nodos (los conceptos)
     console.log('Seeder: Creating nodes...');
     const nodePlanetDef = await this.nodeRepository.save({
       title: "Definition of 'Planet' (UAI 2006)",
@@ -50,15 +49,12 @@ export class SeederService implements OnModuleInit {
       title: "'Orbit Cleaning' (Explanation)",
     });
 
-    // 3. Crear las Conexiones (las relaciones lógicas)
     console.log('Seeder: Creating connections...');
     await this.connectionRepository.save([
-      // La Definición de Planeta REQUIERE los 3 criterios
       { fromNode: nodePlanetDef, toNode: nodeCritery1, type: 'REQUIRES' },
       { fromNode: nodePlanetDef, toNode: nodeCritery2, type: 'REQUIRES' },
       { fromNode: nodePlanetDef, toNode: nodeCritery3, type: 'REQUIRES' },
 
-      // Plutón CUMPLE los dos primeros criterios
       {
         fromNode: nodePluton,
         toNode: nodeCritery1,
@@ -70,21 +66,18 @@ export class SeederService implements OnModuleInit {
         type: 'EVALUATES_AND_SATISFIES',
       },
 
-      // Plutón NO CUMPLE el tercer criterio
       {
         fromNode: nodePluton,
         toNode: nodeCritery3,
         type: 'EVALUATES_AND_NO_SATISFIES',
       },
 
-      // El Criterio 3 se explica con el concepto de 'Limpiar la órbita'
       {
         fromNode: nodeCritery3,
         toNode: nodeOrbitCleaningExplanation,
         type: 'EXPLAINS_WITH_EXAMPLE',
       },
 
-      // La explicación de 'Limpiar la órbita' usa como ejemplo el Cinturón de Kuiper
       {
         fromNode: nodeOrbitCleaningExplanation,
         toNode: nodeKuiperBelt,
