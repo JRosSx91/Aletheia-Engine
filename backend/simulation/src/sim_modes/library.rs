@@ -8,7 +8,6 @@ use rand::prelude::*;
 use csv;
 
 pub struct LibraryExplorer {
-    // shelf_range: (u32, u32),
     books_scanned: HashMap<u32, CosmicNarrative>,
     genre_classification: HashMap<String, Vec<u32>>,
 }
@@ -16,14 +15,12 @@ pub struct LibraryExplorer {
 impl LibraryExplorer {
     pub fn new(_min_alpha_denom: u32, _max_alpha_denom: u32) -> Self {
         Self {
-            // shelf_range: (min_alpha_denom, max_alpha_denom),
             books_scanned: HashMap::new(),
             genre_classification: HashMap::new(),
         }
     }
     
     pub fn generate_universe_at_alpha(&self, target_alpha: f64, rng: &mut impl Rng) -> CosmicLaw {
-        // PREMISA 1: La Primacía de Alpha - derivamos e desde α fijo
         let random_c = C * rng.gen_range(0.5..2.0);
         let random_hbar = H_BAR * rng.gen_range(0.5..2.0);
         let random_epsilon0 = EPSILON_0 * rng.gen_range(0.5..2.0);
@@ -47,7 +44,6 @@ impl LibraryExplorer {
             mass_bottom_quark: rng.gen_range(1.0e-28..1.0e-27),
             mass_tauon: rng.gen_range(1.0e-28..1.0e-26),
 
-            // PREMISA 6: Parámetros geométricos
             spatial_curvature: rng.gen_range(-1.0..1.0),
             dimensional_ratios: [
                 rng.gen_range(0.5..2.0),
@@ -69,7 +65,6 @@ impl LibraryExplorer {
         let mut dramatic_events = Vec::new();
         let mut story_quality = fitness;
 
-        // Analizar los momentos dramáticos del universo
         if engine.primordial_nucleosynthesis_success() > 0.5 {
             dramatic_events.push("The Great Nucleosynthesis".to_string());
         }
@@ -86,7 +81,6 @@ impl LibraryExplorer {
             dramatic_events.push("The Portal Makers Awaken".to_string());
         }
 
-        // Calcular calidad de historia basada en variedad de eventos
         story_quality *= 1.0 + dramatic_events.len() as f64 * 0.2;
 
         let finale_type = match complexity_level {
@@ -100,7 +94,7 @@ impl LibraryExplorer {
         };
 
         CosmicNarrative {
-            story_quality: story_quality.min(2.0), // Cap at 2.0 for exceptional stories
+            story_quality: story_quality.min(2.0),
             narrative_depth: complexity_level,
             dramatic_events,
             finale_type,
@@ -159,7 +153,6 @@ pub fn run_library_mode(
 for alpha_denom in min_alpha..=max_alpha {
         print!("📑 Leyendo libro α = 1/{}... ", alpha_denom);
 
-        // NOTA: La lógica de `scan_book` se mueve aquí para tener acceso a los datos intermedios.
         let target_alpha = 1.0 / (alpha_denom as f64);
         let mut best_narrative = CosmicNarrative {
             story_quality: 0.0,
@@ -169,7 +162,6 @@ for alpha_denom in min_alpha..=max_alpha {
             reproducibility: 0.0,
         };
         
-        // DIAGNÓSTICO: Variables para almacenar los datos del mejor universo encontrado.
         let mut best_diag_data = (0.0, 0.0, 0.0, 0.0, 0.0);
 
         for _ in 0..samples_per_book {
@@ -179,13 +171,12 @@ for alpha_denom in min_alpha..=max_alpha {
             if narrative.story_quality > best_narrative.story_quality {
                 best_narrative = narrative;
                 
-                // DIAGNÓSTICO: PASO 2 - Si encontramos un universo mejor, capturamos sus datos internos.
                 let engine = AdvancedPhysicsEngine::new(universe.clone());
                 let (p_mass, n_mass, _) = engine.get_theoretical_hadron_masses();
                 let mass_diff_mev = (n_mass - p_mass) / MEV_TO_KG;
                 let jeans_mass = engine.calculate_jeans_mass();
                 let lifetime_sec = engine.main_sequence_lifetime(jeans_mass);
-                let lifetime_years = if lifetime_sec > 0.0 { lifetime_sec / (31557600.0) } else { 0.0 }; // Segundos en un año
+                let lifetime_years = if lifetime_sec > 0.0 { lifetime_sec / (31557600.0) } else { 0.0 };
                 let stellar_score = engine.stellar_formation_epoch();
                 
                 best_diag_data = (p_mass, mass_diff_mev, jeans_mass, lifetime_years, stellar_score);
@@ -194,7 +185,6 @@ for alpha_denom in min_alpha..=max_alpha {
         
         explorer.books_scanned.insert(alpha_denom, best_narrative.clone());
         
-        // DIAGNÓSTICO: PASO 3 - Escribir la fila del CSV con los datos narrativos y de diagnóstico.
         wtr.write_record(&[
             alpha_denom.to_string(),
             format!("{:.6}", best_narrative.story_quality),
@@ -232,7 +222,6 @@ for alpha_denom in min_alpha..=max_alpha {
     }
     wtr.flush()?;
 
-    // Clasificar géneros
     explorer.classify_genres();
 
     println!("\n🎭 === ANÁLISIS LITERARIO DE LA BIBLIOTECA CÓSMICA ===");

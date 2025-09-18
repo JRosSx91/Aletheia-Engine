@@ -45,7 +45,6 @@ pub fn run_geometric_mode(samples: u32) -> Result<(), Box<dyn Error>> {
             mass_bottom_quark: rng.gen_range(1.0e-28..1.0e-27),
             mass_tauon: rng.gen_range(1.0e-28..1.0e-26),
 
-            // PREMISA 6: Geometría 5D específica
             spatial_curvature: rng.gen_range(-2.0..2.0),
             dimensional_ratios: [
                 rng.gen_range(0.1..5.0),
@@ -60,7 +59,6 @@ pub fn run_geometric_mode(samples: u32) -> Result<(), Box<dyn Error>> {
 
         let (fitness, complexity_level) = calculate_enhanced_fitness(&test_universe);
 
-        // Clasificar patrones geométricos
         let curvature_class = if test_universe.spatial_curvature < -0.5 {
             "Hyperbolic"
         } else if test_universe.spatial_curvature > 0.5 {

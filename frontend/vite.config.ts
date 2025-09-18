@@ -19,7 +19,7 @@ export default defineConfig({
       warnDuplicatedImports: true,
       removeDuplicatedImports: true,
       defaultExtension: "glsl",
-      root: resolve(__dirname, "src"),
+      root: resolve(__dirname, "node_modules/"),
     }),
   ],
   resolve: {

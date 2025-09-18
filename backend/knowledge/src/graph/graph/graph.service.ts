@@ -13,10 +13,6 @@ export class GraphService {
     private readonly connectionRepository: Repository<Connection>,
   ) {}
 
-  /**
-   * Gets all nodes and connections to build the graph.
-   * In the future, it could accept a 'topic' to return specific graphs.
-   */
   async getFullGraph() {
     console.log('GraphService: Returning pure entities...');
     const nodes = await this.nodeRepository.find();

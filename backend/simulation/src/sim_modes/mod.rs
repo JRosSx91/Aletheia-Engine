@@ -6,3 +6,4 @@ pub mod library;
 pub mod map;
 pub mod validate;
 pub mod stream;
+pub mod simulation_engine;

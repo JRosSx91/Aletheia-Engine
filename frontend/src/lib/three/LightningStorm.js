@@ -1,51 +1,6 @@
 import { MathUtils, Mesh, MeshBasicMaterial, Object3D } from "three";
 import { LightningStrike } from "./LightningStrike.js";
 
-/**
- * @fileoverview Lightning strike object generator
- *
- *
- * Usage
- *
- * const myStorm = new LightningStorm( paramsObject );
- * myStorm.position.set( ... );
- * scene.add( myStorm );
- * ...
- * myStorm.update( currentTime );
- *
- * The "currentTime" can only go forwards or be stopped.
- *
- *
- * LightningStorm parameters:
- *
- * @param {double} size Size of the storm. If no 'onRayPosition' parameter is defined, it means the side of the rectangle the storm covers.
- *
- * @param {double} minHeight Minimum height a ray can start at. If no 'onRayPosition' parameter is defined, it means the height above plane y = 0.
- *
- * @param {double} maxHeight Maximum height a ray can start at. If no 'onRayPosition' parameter is defined, it means the height above plane y = 0.
- *
- * @param {double} maxSlope The maximum inclination slope of a ray. If no 'onRayPosition' parameter is defined, it means the slope relative to plane y = 0.
- *
- * @param {integer} maxLightnings Greater than 0. The maximum number of simultaneous rays.
- *
- * @param {double} lightningMinPeriod minimum time between two consecutive rays.
- *
- * @param {double} lightningMaxPeriod maximum time between two consecutive rays.
- *
- * @param {double} lightningMinDuration The minimum time a ray can last.
- *
- * @param {double} lightningMaxDuration The maximum time a ray can last.
- *
- * @param {Object} lightningParameters The parameters for created rays. See LightningStrike (geometry)
- *
- * @param {Material} lightningMaterial The THREE.Material used for the created rays.
- *
- * @param {function} onRayPosition Optional callback with two Vector3 parameters (source, dest). You can set here the start and end points for each created ray, using the standard size, minHeight, etc parameters and other values in your algorithm.
- *
- * @param {function} onLightningDown This optional callback is called with one parameter (lightningStrike) when a ray ends propagating, so it has hit the ground.
- *
- *
- */
 
 class LightningStorm extends Object3D {
   constructor(stormParams = {}) {
@@ -53,7 +8,6 @@ class LightningStorm extends Object3D {
 
     this.isLightningStorm = true;
 
-    // Parameters
 
     this.stormParams = stormParams;
 
@@ -128,7 +82,6 @@ class LightningStorm extends Object3D {
 
     this.onLightningDown = stormParams.onLightningDown;
 
-    // Internal state
 
     this.inited = false;
     this.nextLightningTime = 0;
@@ -151,7 +104,6 @@ class LightningStorm extends Object3D {
     }
 
     if (time >= this.nextLightningTime) {
-      // Lightning creation
 
       const lightningMesh = this.deadLightningsMeshes.pop();
 
@@ -182,7 +134,6 @@ class LightningStorm extends Object3D {
         this.lightningsMeshes.push(lightningMesh);
       }
 
-      // Schedule next lightning
       this.nextLightningTime = this.getNextLightningTime(time);
     }
 
@@ -208,7 +159,6 @@ class LightningStorm extends Object3D {
       }
 
       if (lightning.state === LightningStrike.RAY_EXTINGUISHED) {
-        // Lightning is to be destroyed
 
         this.lightningsMeshes.splice(this.lightningsMeshes.indexOf(mesh), 1);
 

@@ -4,26 +4,34 @@ import { Scroll, ScrollControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import React, { useRef, useState } from "react";
 import * as THREE from "three";
-import { SceneController } from "../components/introduction/SceneController";
-import { LandscapeScene } from "../components/introduction/LandscapeScene";
+import { SceneController } from "../components/deprecated/SceneController";
+import { LandscapeScene } from "../components/deprecated/introduction/LandscapeScene";
 import styles from "./IntroductionPage.module.css";
 
 export const IntroductionPage: React.FC = () => {
   const landscapeRef = useRef<THREE.Mesh>(null!);
   const [transitionProgress, setTransitionProgress] = useState(0);
-  
+
   // Get current spectrum information
   const getSpectrumInfo = (progress: number) => {
     if (progress < 0.1) {
-      return { name: "Visible Light", color: "#ffffff", description: "What your eyes see" };
+      return {
+        name: "Visible Light",
+        color: "#ffffff",
+        description: "What your eyes see",
+      };
     } else if (progress < 1.0) {
-      return { 
-        name: "Thermal Infrared", 
-        color: `hsl(${(1-progress) * 240}, 80%, 60%)`, // Blue to red transition
-        description: "Heat signatures revealed"
+      return {
+        name: "Thermal Infrared",
+        color: `hsl(${(1 - progress) * 240}, 80%, 60%)`, // Blue to red transition
+        description: "Heat signatures revealed",
       };
     } else {
-      return { name: "Full Thermal IR", color: "#ff6600", description: "Complete heat visualization" };
+      return {
+        name: "Full Thermal IR",
+        color: "#ff6600",
+        description: "Complete heat visualization",
+      };
     }
   };
 
@@ -43,51 +51,53 @@ export const IntroductionPage: React.FC = () => {
   return (
     <div className={styles.container}>
       {/* Debug button */}
-      <button 
+      <button
         onClick={testChannelChange}
         style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
+          position: "fixed",
+          top: "20px",
+          right: "20px",
           zIndex: 1000,
-          padding: '10px 20px',
-          background: '#007acc',
-          color: 'white',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer',
-          fontFamily: 'monospace'
+          padding: "10px 20px",
+          background: "#007acc",
+          color: "white",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+          fontFamily: "monospace",
         }}
       >
         Test Channel Effect
       </button>
-      <div 
+      <div
         style={{
-          position: 'fixed',
-          top: '70px',
-          right: '20px',
+          position: "fixed",
+          top: "70px",
+          right: "20px",
           zIndex: 1000,
-          color: 'white',
-          fontFamily: 'monospace',
-          background: 'rgba(0,0,0,0.8)',
-          padding: '15px',
-          borderRadius: '8px',
-          minWidth: '200px'
+          color: "white",
+          fontFamily: "monospace",
+          background: "rgba(0,0,0,0.8)",
+          padding: "15px",
+          borderRadius: "8px",
+          minWidth: "200px",
         }}
       >
         <div>Progress: {(transitionProgress * 100).toFixed(0)}%</div>
-        <div style={{ 
-          marginTop: '8px', 
-          padding: '5px 8px', 
-          background: 'rgba(255,255,255,0.1)', 
-          borderRadius: '4px',
-          color: getSpectrumInfo(transitionProgress).color,
-          fontSize: '14px',
-          fontWeight: 'bold'
-        }}>
+        <div
+          style={{
+            marginTop: "8px",
+            padding: "5px 8px",
+            background: "rgba(255,255,255,0.1)",
+            borderRadius: "4px",
+            color: getSpectrumInfo(transitionProgress).color,
+            fontSize: "14px",
+            fontWeight: "bold",
+          }}
+        >
           {getSpectrumInfo(transitionProgress).name}
         </div>
-        <div style={{ fontSize: '11px', marginTop: '8px', opacity: 0.7 }}>
+        <div style={{ fontSize: "11px", marginTop: "8px", opacity: 0.7 }}>
           {getSpectrumInfo(transitionProgress).description}
         </div>
       </div>
@@ -98,15 +108,15 @@ export const IntroductionPage: React.FC = () => {
         <ambientLight intensity={0.5} />
         <directionalLight position={[10, 10, 5]} intensity={1} />
         <ScrollControls pages={11} damping={0.3}>
-          <SceneController 
-            landscapeRef={landscapeRef} 
+          <SceneController
+            landscapeRef={landscapeRef}
             onTransitionProgressChange={setTransitionProgress}
           />
           <Scroll>
-            <LandscapeScene 
-              ref={landscapeRef} 
+            <LandscapeScene
+              ref={landscapeRef}
               transitionProgress={transitionProgress}
-            /> 
+            />
           </Scroll>
           <Scroll
             html

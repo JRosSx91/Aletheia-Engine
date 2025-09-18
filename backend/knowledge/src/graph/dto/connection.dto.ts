@@ -1,4 +1,3 @@
-// src/graph/dto/connection.dto.ts
 import { IsString, IsUUID, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { NodeDto } from './node.dto';
