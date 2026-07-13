@@ -7,3 +7,4 @@ pub mod map;
 pub mod validate;
 pub mod stream;
 pub mod simulation_engine;
+pub mod lattice_gas;

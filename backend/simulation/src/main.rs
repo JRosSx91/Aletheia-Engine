@@ -53,6 +53,7 @@ enum Commands {
     },
     Validate,
     Stream,
+    Lattice,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -60,22 +61,33 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match &cli.command {
         Commands::Map { universes } => {
-        sim_modes::map::run_mapping_mode(*universes)?
-    },
-        Commands::Evolve { seed, generations } => { sim_modes::evolve::run_evolutionary_mode(seed, *generations)? },
-        Commands::Harmonic { samples } => {sim_modes::harmonic::run_harmonic_mode(*samples)?},
+            sim_modes::map::run_mapping_mode(*universes)?
+        }
+        Commands::Evolve { seed, generations } => {
+            sim_modes::evolve::run_evolutionary_mode(seed, *generations)?
+        }
+        Commands::Harmonic { samples } => {
+            sim_modes::harmonic::run_harmonic_mode(*samples)?
+        }
         Commands::Library {
             min_alpha,
             max_alpha,
             samples_per_book,
-        } => {sim_modes::library::run_library_mode(*min_alpha, *max_alpha, *samples_per_book)?},
+        } => {
+            sim_modes::library::run_library_mode(*min_alpha, *max_alpha, *samples_per_book)?
+        }
         Commands::AlphaFixed {
             alpha_denominator,
             samples,
-        } => {sim_modes::alpha_fixed::run_alpha_fixed_mode(*alpha_denominator, *samples)?},
-        Commands::Geometric { samples } => {sim_modes::geometric::run_geometric_mode(*samples)?},
+        } => {
+            sim_modes::alpha_fixed::run_alpha_fixed_mode(*alpha_denominator, *samples)?
+        }
+        Commands::Geometric { samples } => {
+            sim_modes::geometric::run_geometric_mode(*samples)?
+        }
         Commands::Validate => sim_modes::validate::run_scientific_validation_mode()?,
         Commands::Stream => sim_modes::stream::run_streaming_mode()?,
+        Commands::Lattice => sim_modes::stream::run_lattice_mode()?,
     }
 
     Ok(())
