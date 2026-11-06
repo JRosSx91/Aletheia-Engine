@@ -1,36 +1,41 @@
-# scripts/analyze_champion.py
+#!/usr/bin/env python3
+"""Compare two JSON genomes if the user supplies them. The CLI does not emit these files."""
 
+from __future__ import annotations
+
+import argparse
 import json
+import sys
+from pathlib import Path
+
 import pandas as pd
 
-try:
-    with open('champion_genome.json', 'r') as f:
-        champion_data = json.load(f)
-    
-    with open('our_universe.json', 'r') as f:
-        our_data = json.load(f)
-        
-except FileNotFoundError as e:
-    print(f"Error: No se pudo encontrar el archivo {e.filename}.")
-    print("Asegúrate de tener 'champion_genome.json' y 'our_universe.json' en la raíz del proyecto.")
-    exit()
 
-# Convertimos los datos a Series de Pandas para facilitar la comparación
-champion_series = pd.Series(champion_data, name='Champion_Universe')
-our_series = pd.Series(our_data, name='Our_Universe')
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--champion", type=Path, required=True)
+    parser.add_argument("--reference", type=Path, required=True)
+    args = parser.parse_args()
 
-# Creamos un DataFrame para la comparación
-df_comparison = pd.concat([champion_series, our_series], axis=1)
+    missing = [str(p) for p in (args.champion, args.reference) if not p.is_file()]
+    if missing:
+        print(
+            "Archivos ausentes: "
+            + ", ".join(missing)
+            + ". El CLI actual no genera champion_genome.json ni our_universe.json. "
+            "No se inventan genomas.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
-# Calculamos la diferencia porcentual
-df_comparison['Difference_%'] = ((champion_series - our_series) / our_series) * 100
+    champion = pd.Series(json.loads(args.champion.read_text(encoding="utf-8")), name="champion")
+    reference = pd.Series(json.loads(args.reference.read_text(encoding="utf-8")), name="reference")
+    table = pd.concat([champion, reference], axis=1)
+    print(table.to_string())
+    print(
+        "\nSin interpretación cosmológica: esta tabla solo confronta JSON suministrados por el usuario."
+    )
 
-# Formato para la visualización
-pd.options.display.float_format = '{:,.6e}'.format
 
-print("--- ANÁLISIS COMPARATIVO DEL GENOMA CÓSMICO ---")
-print(df_comparison)
-
-print("\n--- CONCLUSIONES PRELIMINARES ---")
-print("Observa la increíble similitud en 'alpha_s' y la jerarquía de masas de los quarks.")
-print("Sin embargo, hay diferencias drásticas en otras constantes, indicando una 'solución' alternativa y viable.")
+if __name__ == "__main__":
+    main()

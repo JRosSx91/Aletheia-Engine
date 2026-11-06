@@ -1,36 +1,20 @@
-# scripts/plot_evolution.py (Corregido)
+#!/usr/bin/env python3
+"""Historic script. The `evolve` CLI mode is still a stub and writes no CSV."""
 
-import pandas as pd
-import matplotlib.pyplot as plt
+from __future__ import annotations
 
-try:
-    # CORRECCIÓN: Cambiado 'final_evolution.csv' a 'evolution_data.csv'
-    log_data = pd.read_csv('evolution_data.csv')
-except FileNotFoundError:
-    print("Error: No se pudo encontrar 'evolution_data.csv'.")
-    print("Asegúrate de haber ejecutado el modo 'evolve' primero.")
-    exit()
+import sys
 
-plt.style.use('dark_background')
-fig, ax1 = plt.subplots(1, 1, figsize=(15, 8)) # Simplificado a un solo gráfico
-fig.suptitle('Evolución del Fitness Cósmico', fontsize=20)
-
-# Gráfico de Fitness
-ax1.plot(log_data['generation'], log_data['best_fitness'], 'o-', color='cyan', markersize=4, linewidth=1.5)
-ax1.set_xlabel('Generación', fontsize=12)
-ax1.set_ylabel('Mejor Fitness de la Generación', fontsize=12)
-
-# Añadir una línea de umbral para referencia
-ax1.axhline(y=0.6, color='red', linestyle='--', linewidth=1, label='Umbral de Reproducción (0.6)')
-
-ax1.grid(True, linestyle='--', alpha=0.3)
-ax1.set_title('Progreso de la Optimización Evolutiva', fontsize=16)
-ax1.legend()
-
-# Mejorar la legibilidad de los números del eje Y si son muy parecidos
-plt.ticklabel_format(style='plain', axis='y', useOffset=False)
+from harmonic_csv import reject_stub_csv
 
 
-plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-print("\nMostrando el análisis de la evolución...")
-plt.show()
+def main() -> None:
+    reject_stub_csv("evolve")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except FileNotFoundError as exc:
+        print(exc, file=sys.stderr)
+        sys.exit(2)

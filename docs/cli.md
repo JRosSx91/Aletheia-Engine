@@ -47,15 +47,15 @@ Feature Cargo `empirical_validation`: sustituye masas hadrónicas teóricas por 
 
 ## Scripts Python (`backend/simulation/scripts/`)
 
-Requieren pandas y, según el archivo, plotly o matplotlib. **No verificados en ALE-01B.** Los nombres de CSV **no coinciden** con lo que escribe el Rust actual:
+Guía: [analysis.md](analysis.md). Entorno aislado + `requirements-analysis.txt`. HAR-03 alinea los lectores al esquema **actual** del CLI.
 
-| Script | Espera | El CLI genera |
+| Script | CSV | Estado |
 |---|---|---|
-| `find_adam.py` | `landscape_data.csv` (junto al crate) | `landscape_data_enhanced.csv` |
-| `plot_landscape.py` | `landscape_data.csv` | idem |
-| `plot_interactive.py` | `landscape_data.csv` | idem |
-| `analyze_harmonics.py` | `harmonic_results.csv` | `harmonic` no escribe CSV |
-| `plot_evolution.py` | `evolution_data.csv` | `evolve` no escribe CSV |
-| `analyze_champion.py` | `champion_genome.json`, `our_universe.json` | no los genera el CLI actual |
-
-Hasta alinear nombres, estos scripts **no forman un pipeline reproducible** con el binario de hoy.
+| `plot_map.py` (alias: `plot_landscape.py`, `plot_interactive.py`) | `landscape_data_enhanced.csv` | Restaurado. La columna `alpha` es 1/α |
+| `plot_library.py` | `cosmic_library.csv` | Restaurado. Marca N=137 sin privilegio físico |
+| `plot_alpha_fixed.py` | `alpha_fixed_analysis.csv` | Restaurado. Señaliza variantes ignoradas por el motor |
+| `plot_geometric.py` | `geometric_analysis.csv` | Restaurado. Advierte que la geometría no puntúa |
+| `find_adam.py` | `landscape_data_enhanced.csv` | Restaurado. No rellena constantes ausentes |
+| `analyze_harmonics.py` | — | Stub `harmonic`: error explícito |
+| `plot_evolution.py` | — | Stub `evolve`: error explícito |
+| `analyze_champion.py` | JSON del usuario | No inventa genomas |

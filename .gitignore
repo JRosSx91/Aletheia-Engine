@@ -69,6 +69,9 @@ cargo-target/
 # Simulation / analysis outputs
 /data/
 *.csv
+__pycache__/
+.venv/
+venv/
 
 # #################### #
 # # IDE & EDITORS    #

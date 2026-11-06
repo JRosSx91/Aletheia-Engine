@@ -1,56 +1,49 @@
-# scripts/find_adam.py
+#!/usr/bin/env python3
+"""Report the highest-fitness row in a map CSV. Does not invent missing CosmicLaw fields."""
 
-import pandas as pd
+from __future__ import annotations
+
+import argparse
 import json
-import os
+from pathlib import Path
 
-try:
-    # --- CÓDIGO MEJORADO ---
-    # Encuentra la ruta del directorio donde se encuentra este script
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # Construye la ruta al archivo CSV, que está en el directorio padre (../)
-    csv_path = os.path.join(script_dir, '..', 'landscape_data.csv')
-
-    df = pd.read_csv(csv_path)
-    # -----------------------
-
-except FileNotFoundError:
-    print(f"Error: No se pudo encontrar '{csv_path}'.")
-    print("Asegúrate de haber ejecutado el modo 'map' primero.")
-    exit()
+from harmonic_csv import MAP_FILENAME, load_map
 
 
-# Encontrar el universo con el mayor fitness
-adam = df.loc[df['fitness'].idxmax()]
+def find_adam(input_csv: Path, output_json: Path | None = None) -> dict:
+    frame = load_map(input_csv, allow_empty=False)
+    best = frame.loc[frame["fitness"].idxmax()]
+    record = {
+        "source_csv": str(input_csv),
+        "note": (
+            "Row with maximum internal fitness. Other CosmicLaw fields are not in this CSV "
+            "and are not filled with laboratory placeholders. Column alpha is 1/α."
+        ),
+        "fitness": float(best["fitness"]),
+        "complexity_level": int(best["complexity_level"]),
+        "type": str(best["type"]),
+        "inverse_alpha_stored": float(best["inverse_alpha_stored"]),
+        "alpha_si_reconstructed": float(best["alpha_si_reconstructed"]),
+        "mass_up_quark_kg": float(best["mass_up_quark"]),
+        "mass_down_quark_kg": float(best["mass_down_quark"]),
+        "spatial_curvature_unused_by_fitness": float(best["spatial_curvature"]),
+        "temporal_rate_unused_by_fitness": float(best["temporal_rate"]),
+    }
+    if output_json is not None:
+        output_json.parent.mkdir(parents=True, exist_ok=True)
+        output_json.write_text(json.dumps(record, indent=2), encoding="utf-8")
+    return record
 
-print("--- Adán Encontrado ---")
-print(f"Fitness Máximo: {adam['fitness']:.6f}")
-print(adam)
 
-# Crear el diccionario del genoma para guardarlo en JSON
-# NOTA: Los nombres de las claves deben coincidir con los de la struct CosmicLaw en Rust
-adam_genome = {
-    # Necesitamos añadir valores por defecto para las constantes que no guardamos en el CSV
-    "G": 6.67430e-11, # Valor estándar como placeholder
-    "e": 1.60217663e-19, # Valor estándar como placeholder
-    "alpha_s": 1.0, # Valor placeholder
-    "alpha_w": 1.0e-6, # Valor placeholder
-    "mass_electron": 9.10938356e-31, # Valor placeholder
-    "mass_muon": 1.883531594e-28, # Valor placeholder
-    "mass_tauon": 3.16754e-27, # Valor placeholder
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", type=Path, default=Path(MAP_FILENAME))
+    parser.add_argument("--output-json", type=Path, default=None)
+    args = parser.parse_args()
+    record = find_adam(args.input, args.output_json)
+    print("--- Fila de mayor fitness (métrica interna) ---")
+    print(json.dumps(record, indent=2))
 
-    # Estos son los valores clave de nuestro Adán
-    "mass_up_quark": adam['mass_up_quark'],
-    "mass_down_quark": adam['mass_down_quark'],
-    "mass_strange_quark": adam['mass_strange_quark'],
-    "mass_charm_quark": adam['mass_charm_quark'],
-    "mass_bottom_quark": adam['mass_bottom_quark'],
-    "mass_top_quark": adam['mass_top_quark'],
-}
 
-# Guardar el genoma en un archivo JSON
-with open('adam_genome.json', 'w') as f:
-    json.dump(adam_genome, f, indent=4)
-
-print("\nGenoma de Adán guardado en 'adam_genome.json'")
+if __name__ == "__main__":
+    main()

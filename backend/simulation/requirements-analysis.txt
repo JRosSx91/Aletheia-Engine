@@ -1,0 +1,7 @@
+# Harmonic-137 analysis environment (HAR-03)
+# Install in an isolated venv, not globally:
+#   py -3.14 -m venv ..\Aletheia-Engine-har03-venv
+#   ..\Aletheia-Engine-har03-venv\Scripts\python.exe -m pip install -r requirements-analysis.txt
+pandas==3.1.1
+matplotlib==3.11.2
+plotly==7.1.0
