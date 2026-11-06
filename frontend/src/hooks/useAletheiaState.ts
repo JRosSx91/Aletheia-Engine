@@ -97,13 +97,17 @@ export const useAletheiaState = () => {
     setTimeout(() => setSpeaking(false), 3000);
   };
 
-  return {
+  const neuralState: AletheiaState = {
     speaking,
     thinking,
     alert,
     idle,
     message,
     intensity,
+  };
+
+  return {
+    ...neuralState,
 
     triggerAlert,
     triggerThinking,

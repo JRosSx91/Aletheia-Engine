@@ -22,28 +22,34 @@ interface SimulationUpdate {
   cells: Cell[];
 }
 
-export const SimulationViewer = forwardRef((_props, ref) => {
+interface ModeMessage {
+  type: "MODE";
+  id: string;
+  name: string;
+}
+
+export const SimulationViewer = forwardRef((
+  { onModeChange }: { onModeChange?: (id: string) => void },
+  ref
+) => {
   // Estado para almacenar solo las celdas activas que vienen del backend
   const [activeCells, setActiveCells] = useState(
-    new Map<
-      string,
-      { color: THREE.Color; position: [number, number, number] }
-    >()
+    new Map<string, { color: THREE.Color; position: [number, number, number] }>()
   );
 
   const wsRef = useRef<WebSocket | null>(null);
 
   // Parámetros del grid para coincidir con el backend
   const BACKEND_RANGE = 25; // Backend usa -25 a +25
-  const CELL_SPACING = 2; // Espaciado entre celdas para visualización
+  const CELL_SPACING = 2;   // Espaciado entre celdas para visualización
 
   // Función para convertir coordenadas del backend a posiciones de visualización
-  const backendToWorldPos = (
-    x: number,
-    y: number,
-    z: number
-  ): [number, number, number] => {
-    return [x * CELL_SPACING, y * CELL_SPACING, z * CELL_SPACING];
+  const backendToWorldPos = (x: number, y: number, z: number): [number, number, number] => {
+    return [
+      x * CELL_SPACING,
+      y * CELL_SPACING,
+      z * CELL_SPACING
+    ];
   };
 
   useEffect(() => {
@@ -53,14 +59,22 @@ export const SimulationViewer = forwardRef((_props, ref) => {
     ws.onopen = () =>
       console.log("✅ Conectado al motor de simulación de Rust.");
 
-    // Reemplaza el bloque ws.onmessage con la siguiente versión corregida
     ws.onmessage = (event) => {
       try {
-        const data: SimulationUpdate = JSON.parse(event.data);
+        const data = JSON.parse(event.data) as ModeMessage | SimulationUpdate;
+
+        // Mensaje de identidad del experimento: no son celdas.
+        if (data && "type" in data && data.type === "MODE") {
+          const mode = data;
+          console.log(`🏷️ Modo activo: ${mode.id} (${mode.name})`);
+          onModeChange?.(mode.id);
+          return;
+        }
+
         console.log("📥 Datos recibidos del backend:", data);
 
-        if (data && data.cells && Array.isArray(data.cells)) {
-          setActiveCells((prevCells) => {
+        if (data && "cells" in data && Array.isArray(data.cells)) {
+          setActiveCells(prevCells => {
             const newCells = new Map(prevCells);
 
             // Procesar cada celda recibida del backend
@@ -72,26 +86,20 @@ export const SimulationViewer = forwardRef((_props, ref) => {
                 // Materia/energía - rojo
                 newCells.set(posKey, {
                   color: new THREE.Color(1.0, 0.2, 0.2),
-                  position: worldPos,
+                  position: worldPos
                 });
-                console.log(
-                  `🔴 Celda activa en (${cell.x},${cell.y},${cell.z}) -> mundo (${worldPos[0]},${worldPos[1]},${worldPos[2]})`
-                );
+                console.log(`🔴 Celda activa en (${cell.x},${cell.y},${cell.z}) -> mundo (${worldPos[0]},${worldPos[1]},${worldPos[2]})`);
               } else if (cell.state === -1) {
                 // Antimateria - azul
                 newCells.set(posKey, {
                   color: new THREE.Color(0.2, 0.2, 1.0),
-                  position: worldPos,
+                  position: worldPos
                 });
-                console.log(
-                  `🔵 Celda activa en (${cell.x},${cell.y},${cell.z}) -> mundo (${worldPos[0]},${worldPos[1]},${worldPos[2]})`
-                );
+                console.log(`🔵 Celda activa en (${cell.x},${cell.y},${cell.z}) -> mundo (${worldPos[0]},${worldPos[1]},${worldPos[2]})`);
               } else if (cell.state === 0) {
                 // Vacío - remover de celdas activas
                 newCells.delete(posKey);
-                console.log(
-                  `⚫ Celda desactivada en (${cell.x},${cell.y},${cell.z})`
-                );
+                console.log(`⚫ Celda desactivada en (${cell.x},${cell.y},${cell.z})`);
               }
             });
 
@@ -99,7 +107,7 @@ export const SimulationViewer = forwardRef((_props, ref) => {
             return newCells;
           });
         } else {
-          console.warn("⚠️ Formato de datos inesperado:", data);
+          console.warn("⚠️  Formato de datos inesperado:", data);
         }
       } catch (error) {
         console.error("❌ Error al parsear los datos del backend:", error);
@@ -109,7 +117,8 @@ export const SimulationViewer = forwardRef((_props, ref) => {
     ws.onerror = (error) =>
       console.error("❌ Error en la conexión WebSocket:", error);
 
-    ws.onclose = () => console.log("🔌 Conexión WebSocket cerrada");
+    ws.onclose = () =>
+      console.log("🔌 Conexión WebSocket cerrada");
 
     return () => {
       ws.close();
@@ -133,10 +142,7 @@ export const SimulationViewer = forwardRef((_props, ref) => {
   return (
     <group>
       {/* Grid de referencia - usar el mismo tamaño que el backend */}
-      <QuantumGrid
-        gridSize={BACKEND_RANGE * 2 * CELL_SPACING}
-        divisions={BACKEND_RANGE * 2}
-      />
+      <QuantumGrid gridSize={BACKEND_RANGE * 2 * CELL_SPACING} divisions={20} />
 
       {/* Renderizar solo las celdas activas */}
       {activeCellsArray.map((cellData) => (

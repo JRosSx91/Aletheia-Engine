@@ -25,12 +25,12 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/types",
-    "src/lib/three/LightningStrike.js",
-    "src/lib/three/LightningStorm.js",
-    "src/lib/three/SimplexNoise.js"
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/types"],
+  // Active graph is main.tsx → routes/AppRouter. Files below stay on disk but are not tsc'd.
+  "exclude": [
+    "src/components/deprecated/**",
+    "src/pages/IntroductionPage.tsx",
+    "src/App.tsx",
+    "src/lib/three/**"
   ]
 }

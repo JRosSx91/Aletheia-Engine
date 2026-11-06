@@ -1,8 +1,23 @@
 import type { ShaderMaterial } from "three";
-import type { Object3DNode } from "@react-three/fiber";
+import type { Object3DNode, ThreeElement } from "@react-three/fiber";
+import type {
+  MeshLineGeometry,
+  MeshLineMaterial,
+  PointsRepresentation,
+} from "meshline";
 import { HolographicMaterialProps } from "../components/HolographicMaterial";
 declare module "@react-three/fiber" {
   interface ThreeElements {
+    meshLineGeometry: Partial<
+      Omit<ThreeElement<typeof MeshLineGeometry>, "points">
+    > & {
+      points?: PointsRepresentation;
+    };
+    meshLineMaterial: Partial<
+      Omit<ThreeElement<typeof MeshLineMaterial>, "sizeAttenuation">
+    > & {
+      sizeAttenuation?: number | boolean;
+    };
     holographicMaterial: Object3DNode<
       ShaderMaterial & HolographicMaterialProps,
       typeof ShaderMaterial
