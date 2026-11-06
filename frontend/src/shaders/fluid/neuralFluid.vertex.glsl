@@ -1,6 +1,7 @@
 varying vec2 vUv;
 varying vec3 vPosition;
 varying vec3 vNormal;
+varying vec3 vViewDir;
 uniform float uTime;
 uniform float uDistortion;
 uniform float uSpeed;
@@ -72,11 +73,13 @@ float fbm(vec3 p) {
 void main() {
   vUv = uv;
   vNormal = normalize(normalMatrix * normal);
-  
+
   vec3 pos = position;
   float noiseValue = fbm(pos * 1.0 + vec3(uTime * uSpeed));
   pos += normal * noiseValue * uDistortion;
-  
+
   vPosition = pos;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+  vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+  vViewDir = normalize(-mvPosition.xyz);
+  gl_Position = projectionMatrix * mvPosition;
 }
