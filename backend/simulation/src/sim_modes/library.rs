@@ -1,11 +1,28 @@
-use crate::core::models::{CosmicNarrative, CosmicLaw};
-use crate::physics::engine::{AdvancedPhysicsEngine, calculate_enhanced_fitness};
+use crate::core::models::{CosmicLaw, CosmicNarrative};
 use crate::physics::constants::*;
-use std::f64::consts::PI;
-use std::error::Error;
-use std::collections::HashMap;
-use rand::prelude::*;
+use crate::physics::engine::{calculate_enhanced_fitness, AdvancedPhysicsEngine};
+use crate::utils::HarmonicRng;
 use csv;
+use rand::Rng;
+use std::collections::HashMap;
+use std::error::Error;
+use std::f64::consts::PI;
+use std::path::Path;
+
+pub const LIBRARY_CSV_FILENAME: &str = "cosmic_library.csv";
+pub const LIBRARY_CSV_HEADERS: [&str; 11] = [
+    "alpha_denominator",
+    "story_quality",
+    "narrative_depth",
+    "finale_type",
+    "reproducibility",
+    "dramatic_events_count",
+    "theoretical_proton_mass_kg",
+    "theoretical_mass_diff_mev",
+    "jeans_mass_kg",
+    "stellar_lifetime_years",
+    "stellar_score",
+];
 
 pub struct LibraryExplorer {
     books_scanned: HashMap<u32, CosmicNarrative>,
@@ -19,7 +36,7 @@ impl LibraryExplorer {
             genre_classification: HashMap::new(),
         }
     }
-    
+
     pub fn generate_universe_at_alpha(&self, target_alpha: f64, rng: &mut impl Rng) -> CosmicLaw {
         let random_c = C * rng.gen_range(0.5..2.0);
         let random_hbar = H_BAR * rng.gen_range(0.5..2.0);
@@ -130,16 +147,30 @@ pub fn run_library_mode(
     min_alpha: u32,
     max_alpha: u32,
     samples_per_book: u32,
+    rng_seed: Option<u64>,
 ) -> Result<(), Box<dyn Error>> {
-    let mut explorer = LibraryExplorer::new(min_alpha, max_alpha);
-    let mut rng = thread_rng();
-    let mut wtr = csv::Writer::from_path("cosmic_library.csv")?;
+    run_library_mode_to_path(
+        min_alpha,
+        max_alpha,
+        samples_per_book,
+        rng_seed,
+        Path::new(LIBRARY_CSV_FILENAME),
+    )
+    .map(|_| ())
+}
 
-     wtr.write_record(&[
-        "alpha_denominator", "story_quality", "narrative_depth", "finale_type", "reproducibility", "dramatic_events_count",
-        "theoretical_proton_mass_kg", "theoretical_mass_diff_mev",
-        "jeans_mass_kg", "stellar_lifetime_years", "stellar_score"
-    ])?;
+pub fn run_library_mode_to_path(
+    min_alpha: u32,
+    max_alpha: u32,
+    samples_per_book: u32,
+    rng_seed: Option<u64>,
+    path: &Path,
+) -> Result<u64, Box<dyn Error>> {
+    let mut explorer = LibraryExplorer::new(min_alpha, max_alpha);
+    let mut rng = HarmonicRng::new(rng_seed);
+    let mut wtr = csv::Writer::from_path(path)?;
+
+    wtr.write_record(LIBRARY_CSV_HEADERS)?;
 
     println!("📚 Explorando la Biblioteca Cósmica...");
     println!(
@@ -148,9 +179,15 @@ pub fn run_library_mode(
     );
 
     let mut masterpieces = Vec::new();
-    let total_books = max_alpha - min_alpha + 1;
+    // Empty range when min > max (historical loop). Avoid debug underflow
+    // when computing the progress denominator.
+    let total_books = if max_alpha >= min_alpha {
+        max_alpha - min_alpha + 1
+    } else {
+        0
+    };
 
-for alpha_denom in min_alpha..=max_alpha {
+    for alpha_denom in min_alpha..=max_alpha {
         print!("📑 Leyendo libro α = 1/{}... ", alpha_denom);
 
         let target_alpha = 1.0 / (alpha_denom as f64);
@@ -161,7 +198,7 @@ for alpha_denom in min_alpha..=max_alpha {
             finale_type: "Silence".to_string(),
             reproducibility: 0.0,
         };
-        
+
         let mut best_diag_data = (0.0, 0.0, 0.0, 0.0, 0.0);
 
         for _ in 0..samples_per_book {
@@ -170,21 +207,33 @@ for alpha_denom in min_alpha..=max_alpha {
 
             if narrative.story_quality > best_narrative.story_quality {
                 best_narrative = narrative;
-                
+
                 let engine = AdvancedPhysicsEngine::new(universe.clone());
                 let (p_mass, n_mass, _) = engine.get_theoretical_hadron_masses();
                 let mass_diff_mev = (n_mass - p_mass) / MEV_TO_KG;
                 let jeans_mass = engine.calculate_jeans_mass();
                 let lifetime_sec = engine.main_sequence_lifetime(jeans_mass);
-                let lifetime_years = if lifetime_sec > 0.0 { lifetime_sec / (31557600.0) } else { 0.0 };
+                let lifetime_years = if lifetime_sec > 0.0 {
+                    lifetime_sec / (31557600.0)
+                } else {
+                    0.0
+                };
                 let stellar_score = engine.stellar_formation_epoch();
-                
-                best_diag_data = (p_mass, mass_diff_mev, jeans_mass, lifetime_years, stellar_score);
+
+                best_diag_data = (
+                    p_mass,
+                    mass_diff_mev,
+                    jeans_mass,
+                    lifetime_years,
+                    stellar_score,
+                );
             }
         }
-        
-        explorer.books_scanned.insert(alpha_denom, best_narrative.clone());
-        
+
+        explorer
+            .books_scanned
+            .insert(alpha_denom, best_narrative.clone());
+
         wtr.write_record(&[
             alpha_denom.to_string(),
             format!("{:.6}", best_narrative.story_quality),
@@ -196,12 +245,15 @@ for alpha_denom in min_alpha..=max_alpha {
             format!("{:e}", best_diag_data.1), // theoretical_mass_diff_mev
             format!("{:e}", best_diag_data.2), // jeans_mass_kg
             format!("{:e}", best_diag_data.3), // stellar_lifetime_years
-            format!("{:.6}", best_diag_data.4),  // stellar_score
+            format!("{:.6}", best_diag_data.4), // stellar_score
         ])?;
 
         if best_narrative.story_quality > 0.8 {
             masterpieces.push((alpha_denom, best_narrative.story_quality));
-            println!("✨ ¡OBRA MAESTRA! Calidad: {:.4}", best_narrative.story_quality);
+            println!(
+                "✨ ¡OBRA MAESTRA! Calidad: {:.4}",
+                best_narrative.story_quality
+            );
         } else if best_narrative.story_quality > 0.5 {
             println!(
                 "📝 Historia interesante. Calidad: {:.4}",
@@ -245,6 +297,9 @@ for alpha_denom in min_alpha..=max_alpha {
         println!("🌟 ¡Nuestro universo (α = 1/137) está entre las obras maestras!");
     }
 
-    Ok(())
+    Ok(if max_alpha >= min_alpha {
+        u64::from(max_alpha - min_alpha + 1)
+    } else {
+        0
+    })
 }
-

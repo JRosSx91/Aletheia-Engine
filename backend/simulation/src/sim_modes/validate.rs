@@ -214,7 +214,7 @@ pub fn run_scientific_validation_mode() -> Result<(), Box<dyn std::error::Error>
     Ok(())
 }
 
-fn create_reference_universe() -> CosmicLaw {
+pub(crate) fn create_reference_universe() -> CosmicLaw {
     CosmicLaw {
         g: G_GRAVITATIONAL,  // Usar constante de constants.rs
         e: ELEMENTARY_CHARGE, // Usar constante exacta

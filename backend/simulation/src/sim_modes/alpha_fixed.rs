@@ -1,24 +1,48 @@
 use crate::core::models::CosmicLaw;
-use crate::physics::engine::calculate_enhanced_fitness;
 use crate::physics::constants::*;
-use std::error::Error;
-use rand::prelude::*;
+use crate::physics::engine::calculate_enhanced_fitness;
+use crate::utils::HarmonicRng;
 use csv;
+use rand::Rng;
+use std::error::Error;
 use std::f64::consts::PI;
+use std::path::Path;
 
-pub fn run_alpha_fixed_mode(alpha_denominator: u32, samples: u32) -> Result<(), Box<dyn Error>> {
-    let mut rng = thread_rng();
-    let mut wtr = csv::Writer::from_path("alpha_fixed_analysis.csv")?;
+pub const ALPHA_FIXED_CSV_FILENAME: &str = "alpha_fixed_analysis.csv";
+pub const ALPHA_FIXED_CSV_HEADERS: [&str; 7] = [
+    "sample_id",
+    "derived_e",
+    "fitness",
+    "complexity_level",
+    "c_variant",
+    "hbar_variant",
+    "epsilon0_variant",
+];
 
-    wtr.write_record(&[
-        "sample_id",
-        "derived_e",
-        "fitness",
-        "complexity_level",
-        "c_variant",
-        "hbar_variant",
-        "epsilon0_variant",
-    ])?;
+pub fn run_alpha_fixed_mode(
+    alpha_denominator: u32,
+    samples: u32,
+    rng_seed: Option<u64>,
+) -> Result<(), Box<dyn Error>> {
+    run_alpha_fixed_mode_to_path(
+        alpha_denominator,
+        samples,
+        rng_seed,
+        Path::new(ALPHA_FIXED_CSV_FILENAME),
+    )
+    .map(|_| ())
+}
+
+pub fn run_alpha_fixed_mode_to_path(
+    alpha_denominator: u32,
+    samples: u32,
+    rng_seed: Option<u64>,
+    path: &Path,
+) -> Result<u64, Box<dyn Error>> {
+    let mut rng = HarmonicRng::new(rng_seed);
+    let mut wtr = csv::Writer::from_path(path)?;
+
+    wtr.write_record(ALPHA_FIXED_CSV_HEADERS)?;
 
     println!("🔬 PREMISA 1: Análisis de la Primacía de Alpha");
     println!(
@@ -27,46 +51,13 @@ pub fn run_alpha_fixed_mode(alpha_denominator: u32, samples: u32) -> Result<(), 
     );
 
     let target_alpha = 1.0 / (alpha_denominator as f64);
-    let mut viable_universes = 0;
+    let mut viable_universes = 0u64;
     let mut best_fitness = 0.0;
     let mut best_universe = None;
 
     for sample_id in 0..samples {
-        let c_variant = C * rng.gen_range(0.1..10.0);
-        let hbar_variant = H_BAR * rng.gen_range(0.1..10.0);
-        let epsilon0_variant = EPSILON_0 * rng.gen_range(0.1..10.0);
-        let derived_e =
-            (target_alpha * 4.0 * PI * epsilon0_variant * hbar_variant * c_variant).sqrt();
-
-        let test_universe = CosmicLaw {
-            g: rng.gen_range(6.674e-11..6.674e-10),
-            e: derived_e,
-            alpha_s: rng.gen_range(0.05..2.0),
-            alpha_w: rng.gen_range(1.0e-9..1.0e-4),
-
-            mass_up_quark: rng.gen_range(1.0e-30..6.0e-30),
-            mass_down_quark: rng.gen_range(1.0e-30..1.3e-29),
-            mass_electron: rng.gen_range(1.0e-31..1.0e-30),
-
-            mass_charm_quark: rng.gen_range(1.0e-29..1.0e-27),
-            mass_strange_quark: rng.gen_range(1.0e-29..1.0e-28),
-            mass_muon: rng.gen_range(1.0e-29..1.0e-27),
-
-            mass_top_quark: rng.gen_range(1.0e-28..1.0e-25),
-            mass_bottom_quark: rng.gen_range(1.0e-28..1.0e-27),
-            mass_tauon: rng.gen_range(1.0e-28..1.0e-26),
-
-            spatial_curvature: rng.gen_range(-1.0..1.0),
-            dimensional_ratios: [
-                rng.gen_range(0.5..2.0),
-                rng.gen_range(0.5..2.0),
-                rng.gen_range(0.5..2.0),
-                rng.gen_range(0.5..2.0),
-            ],
-            temporal_evolution_rate: rng.gen_range(0.1..10.0),
-            dark_energy_density: rng.gen_range(0.0..2.0e-29),
-            dark_matter_coupling: rng.gen_range(0.0..1.0),
-        };
+        let (test_universe, c_variant, hbar_variant, epsilon0_variant, derived_e) =
+            sample_alpha_fixed_universe(&mut rng, target_alpha);
 
         let (fitness, complexity_level) = calculate_enhanced_fitness(&test_universe);
 
@@ -89,7 +80,10 @@ pub fn run_alpha_fixed_mode(alpha_denominator: u32, samples: u32) -> Result<(), 
             }
         }
 
-        if sample_id % (samples / 10) == 0 && sample_id > 0 {
+        // Historical formula: `sample_id % (samples / 10)`. That panics when
+        // `samples < 10` because of modulo by zero. Skip progress in that case;
+        // for `samples >= 10` the cadence is unchanged.
+        if samples >= 10 && sample_id > 0 && sample_id % (samples / 10) == 0 {
             let progress = (sample_id as f64 / samples as f64) * 100.0;
             println!(
                 "📊 Progreso: {:.0}% - {} universos viables encontrados",
@@ -109,7 +103,11 @@ pub fn run_alpha_fixed_mode(alpha_denominator: u32, samples: u32) -> Result<(), 
         "✅ Universos viables: {} de {} ({:.2}%)",
         viable_universes,
         samples,
-        (viable_universes as f64 / samples as f64) * 100.0
+        if samples == 0 {
+            0.0
+        } else {
+            (viable_universes as f64 / samples as f64) * 100.0
+        }
     );
     println!("🏆 Mejor fitness: {:.6}", best_fitness);
 
@@ -132,5 +130,55 @@ pub fn run_alpha_fixed_mode(alpha_denominator: u32, samples: u32) -> Result<(), 
         );
     }
 
-    Ok(())
+    Ok(viable_universes)
+}
+
+/// Historical inversion: e is derived from sampled c, ħ, ε₀, but the fitness
+/// engine recomputes α with SI constants. Keep both sides of that inconsistency.
+pub(crate) fn sample_alpha_fixed_universe<R: Rng>(
+    rng: &mut R,
+    target_alpha: f64,
+) -> (CosmicLaw, f64, f64, f64, f64) {
+    let c_variant = C * rng.gen_range(0.1..10.0);
+    let hbar_variant = H_BAR * rng.gen_range(0.1..10.0);
+    let epsilon0_variant = EPSILON_0 * rng.gen_range(0.1..10.0);
+    let derived_e = (target_alpha * 4.0 * PI * epsilon0_variant * hbar_variant * c_variant).sqrt();
+
+    let test_universe = CosmicLaw {
+        g: rng.gen_range(6.674e-11..6.674e-10),
+        e: derived_e,
+        alpha_s: rng.gen_range(0.05..2.0),
+        alpha_w: rng.gen_range(1.0e-9..1.0e-4),
+
+        mass_up_quark: rng.gen_range(1.0e-30..6.0e-30),
+        mass_down_quark: rng.gen_range(1.0e-30..1.3e-29),
+        mass_electron: rng.gen_range(1.0e-31..1.0e-30),
+
+        mass_charm_quark: rng.gen_range(1.0e-29..1.0e-27),
+        mass_strange_quark: rng.gen_range(1.0e-29..1.0e-28),
+        mass_muon: rng.gen_range(1.0e-29..1.0e-27),
+
+        mass_top_quark: rng.gen_range(1.0e-28..1.0e-25),
+        mass_bottom_quark: rng.gen_range(1.0e-28..1.0e-27),
+        mass_tauon: rng.gen_range(1.0e-28..1.0e-26),
+
+        spatial_curvature: rng.gen_range(-1.0..1.0),
+        dimensional_ratios: [
+            rng.gen_range(0.5..2.0),
+            rng.gen_range(0.5..2.0),
+            rng.gen_range(0.5..2.0),
+            rng.gen_range(0.5..2.0),
+        ],
+        temporal_evolution_rate: rng.gen_range(0.1..10.0),
+        dark_energy_density: rng.gen_range(0.0..2.0e-29),
+        dark_matter_coupling: rng.gen_range(0.0..1.0),
+    };
+
+    (
+        test_universe,
+        c_variant,
+        hbar_variant,
+        epsilon0_variant,
+        derived_e,
+    )
 }

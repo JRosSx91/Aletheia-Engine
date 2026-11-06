@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct CosmicLaw {
     #[allow(non_snake_case)]
     pub g: f64,
@@ -32,8 +30,8 @@ pub struct CosmicLaw {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct CosmicNarrative {
-    pub story_quality: f64,  
-    pub narrative_depth: u8,         
+    pub story_quality: f64,
+    pub narrative_depth: u8,
     pub dramatic_events: Vec<String>,
     pub finale_type: String,
     pub reproducibility: f64,
