@@ -1,4 +1,5 @@
 use crate::core::models::CosmicLaw;
+use crate::physics::alpha::si_alpha;
 use crate::physics::constants::*;
 use std::f64::consts::PI;
 
@@ -26,7 +27,7 @@ pub struct AdvancedPhysicsEngine {
 
 impl AdvancedPhysicsEngine {
     pub fn new(laws: CosmicLaw) -> Self {
-        let alpha = laws.e.powi(2) / (4.0 * PI * EPSILON_0 * H_BAR * C);
+        let alpha = si_alpha(laws.e);
 
         Self {
             laws: laws.clone(),

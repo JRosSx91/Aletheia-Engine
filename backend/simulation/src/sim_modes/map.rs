@@ -1,11 +1,10 @@
 use crate::core::models::CosmicLaw;
-use crate::physics::constants::*;
+use crate::physics::alpha::si_alpha;
 use crate::physics::engine::calculate_enhanced_fitness;
 use crate::utils::{analyze_universe_type, HarmonicRng};
 use csv;
 use rand::Rng;
 use std::error::Error;
-use std::f64::consts::PI;
 use std::path::Path;
 
 pub const MAP_CSV_FILENAME: &str = "landscape_data_enhanced.csv";
@@ -44,7 +43,7 @@ pub fn run_mapping_mode_to_path(
         let random_laws = sample_mapped_universe(&mut rng);
 
         let (fitness, level) = calculate_enhanced_fitness(&random_laws);
-        let alpha = random_laws.e.powi(2) / (4.0 * PI * EPSILON_0 * H_BAR * C);
+        let alpha = si_alpha(random_laws.e);
 
         if fitness > 0.01 {
             let universe_type = analyze_universe_type(level);

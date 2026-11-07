@@ -14,6 +14,7 @@ use super::harmonic::run_harmonic_mode;
 use super::library::{run_library_mode_to_path, LibraryExplorer, LIBRARY_CSV_HEADERS};
 use super::map::{run_mapping_mode_to_path, sample_mapped_universe, MAP_CSV_HEADERS};
 use super::validate::{create_reference_universe, run_scientific_validation_mode};
+use crate::physics::alpha::{si_alpha, AlphaTrace};
 use crate::physics::constants::*;
 use crate::physics::engine::{calculate_enhanced_fitness, AdvancedPhysicsEngine};
 use crate::utils::HarmonicRng;
@@ -114,7 +115,7 @@ fn map_csv_is_deterministic_for_fixed_seed() {
 fn map_alpha_column_is_reciprocal_of_si_alpha() {
     let mut rng = HarmonicRng::new(Some(SEED_A));
     let laws = sample_mapped_universe(&mut rng);
-    let engine_alpha = laws.e.powi(2) / (4.0 * PI * EPSILON_0 * H_BAR * C);
+    let engine_alpha = si_alpha(laws.e);
     let recorded = format!("{:.6}", 1.0 / engine_alpha);
     let expected = format!("{:.6}", 4.0 * PI * EPSILON_0 * H_BAR * C / laws.e.powi(2));
     assert_eq!(recorded, expected);
@@ -152,9 +153,9 @@ fn library_derived_e_matches_sampled_constants_not_engine_alpha() {
     for _ in 0..8 {
         let laws = explorer.generate_universe_at_alpha(target, &mut rng);
         let engine = AdvancedPhysicsEngine::new(laws.clone());
-        let si_alpha = laws.e.powi(2) / (4.0 * PI * EPSILON_0 * H_BAR * C);
-        assert!((engine.alpha - si_alpha).abs() < 1e-18);
-        max_rel_err = max_rel_err.max((si_alpha - target).abs() / target);
+        let engine_alpha = si_alpha(laws.e);
+        assert_eq!(engine.alpha, engine_alpha);
+        max_rel_err = max_rel_err.max((engine_alpha - target).abs() / target);
     }
     assert!(
         max_rel_err > 1e-3,
@@ -181,11 +182,16 @@ fn alpha_fixed_derived_e_inverts_variants_not_si_constants() {
     let (laws, c_v, h_v, e_v, derived_e) = sample_alpha_fixed_universe(&mut rng, target);
     let reconstructed = derived_e.powi(2) / (4.0 * PI * e_v * h_v * c_v);
     assert!((reconstructed - target).abs() / target < 1e-12);
-    let engine_alpha = laws.e.powi(2) / (4.0 * PI * EPSILON_0 * H_BAR * C);
+    let engine_alpha = si_alpha(laws.e);
     assert!(
         (engine_alpha - target).abs() > 1e-6,
         "engine α coinciding with the target would hide the historical inversion bug"
     );
+    let trace = AlphaTrace::from_variants(target, derived_e, e_v, h_v, c_v);
+    assert_eq!(trace.alpha_target, Some(target));
+    assert!(trace.alpha_derived.is_some());
+    assert_eq!(trace.alpha_engine, engine_alpha);
+    assert_ne!(trace.alpha_derived, Some(trace.alpha_engine));
 }
 
 #[test]
@@ -232,12 +238,11 @@ fn csv_write_fails_when_path_is_a_directory() {
 fn unused_cosmic_law_fields_do_not_change_fitness() {
     let mut laws = create_reference_universe();
     let baseline = calculate_enhanced_fitness(&laws);
-    laws.spatial_curvature = 1.5;
-    laws.dimensional_ratios = [4.0, 0.2, 3.0, 1.7];
-    laws.temporal_evolution_rate = 50.0;
-    laws.alpha_w = 1.0e-5;
-    laws.dark_matter_coupling = 0.9;
+    let hadrons = AdvancedPhysicsEngine::new(laws.clone()).get_theoretical_hadron_masses();
+    laws.scramble_fitness_ignored_fields();
     assert_eq!(calculate_enhanced_fitness(&laws), baseline);
+    let hadrons_after = AdvancedPhysicsEngine::new(laws).get_theoretical_hadron_masses();
+    assert_eq!(hadrons, hadrons_after);
 }
 
 #[test]
@@ -304,4 +309,155 @@ fn harmonic_and_evolve_remain_stubs() {
     run_harmonic_mode(10).unwrap();
     run_evolutionary_mode("genome.json", 10).unwrap();
     run_evolutionary_mode("missing-file-does-not-matter.json", 0).unwrap();
+}
+
+#[test]
+fn si_alpha_matches_historical_expression_and_engine() {
+    let laws = create_reference_universe();
+    let historical = laws.e.powi(2) / (4.0 * PI * EPSILON_0 * H_BAR * C);
+    let extracted = si_alpha(laws.e);
+    let engine = AdvancedPhysicsEngine::new(laws.clone());
+    assert_eq!(extracted, historical);
+    assert_eq!(engine.alpha, historical);
+    assert_eq!(
+        crate::physics::alpha::alpha_from_em_parameters(laws.e, EPSILON_0, H_BAR, C),
+        historical
+    );
+}
+
+#[test]
+fn alpha_trace_does_not_substitute_target_for_engine() {
+    let mut rng = HarmonicRng::new(Some(SEED_A));
+    let mapped = sample_mapped_universe(&mut rng);
+    let map_trace = AlphaTrace::engine_only(mapped.e);
+    assert!(map_trace.alpha_target.is_none());
+    assert!(map_trace.alpha_derived.is_none());
+    assert_eq!(map_trace.alpha_engine, si_alpha(mapped.e));
+
+    let target = 1.0 / 137.0;
+    let library_trace = AlphaTrace::target_without_variants(target, mapped.e);
+    assert_eq!(library_trace.alpha_target, Some(target));
+    assert!(
+        library_trace.alpha_derived.is_none(),
+        "discarded construction constants must stay unavailable"
+    );
+    assert_eq!(library_trace.alpha_engine, si_alpha(mapped.e));
+    assert_ne!(library_trace.alpha_target, Some(library_trace.alpha_engine));
+}
+
+#[test]
+fn mass_electron_gate_trips_only_past_threshold() {
+    let mut laws = create_reference_universe();
+    let baseline = calculate_enhanced_fitness(&laws);
+    laws.mass_electron *= 1.01;
+    assert_eq!(
+        calculate_enhanced_fitness(&laws),
+        baseline,
+        "small m_e change below the β-cut must not move the score"
+    );
+    laws.mass_electron = 1.0e-27;
+    let (fitness, level) = calculate_enhanced_fitness(&laws);
+    assert_eq!(fitness, 0.0);
+    assert_eq!(level, 0);
+}
+
+#[test]
+fn dark_energy_density_is_a_hubble_threshold() {
+    let mut laws = create_reference_universe();
+    let baseline = calculate_enhanced_fitness(&laws);
+    laws.dark_energy_density *= 2.0;
+    assert_eq!(
+        calculate_enhanced_fitness(&laws),
+        baseline,
+        "ρ_Λ remains on the cosmological plateau for a factor-of-two nudge at reference"
+    );
+    laws.dark_energy_density = 1.0;
+    let (fitness, level) = calculate_enhanced_fitness(&laws);
+    assert_eq!(fitness, 0.0);
+    assert_eq!(level, 0);
+}
+
+#[test]
+fn alpha_s_moves_fitness_via_hadron_mass_difference() {
+    let mut laws = create_reference_universe();
+    let baseline = calculate_enhanced_fitness(&laws);
+    laws.alpha_s = 0.1181 * 1.05;
+    assert_ne!(
+        calculate_enhanced_fitness(&laws),
+        baseline,
+        "α_s enters BBN through theoretical Δm; a 5% shift at reference must be visible"
+    );
+}
+
+#[test]
+fn charge_sensitivity_is_observable_on_sampled_laws_not_every_perturbation() {
+    let mut rng = HarmonicRng::new(Some(SEED_A));
+    let mut found = false;
+    for _ in 0..256 {
+        let laws = sample_mapped_universe(&mut rng);
+        let baseline = calculate_enhanced_fitness(&laws);
+        let mut scaled = laws.clone();
+        scaled.e *= 8.0;
+        if calculate_enhanced_fitness(&scaled) != baseline {
+            found = true;
+            break;
+        }
+    }
+    assert!(
+        found,
+        "expected at least one seed-137137 map sample where scaling e changes fitness"
+    );
+}
+
+#[test]
+fn gravity_sensitivity_is_observable_away_from_the_cosmological_cut() {
+    let mut rng = HarmonicRng::new(Some(SEED_A));
+    let mut found = false;
+    for _ in 0..256 {
+        let laws = sample_mapped_universe(&mut rng);
+        let baseline = calculate_enhanced_fitness(&laws);
+        if baseline.0 == 0.0 {
+            continue;
+        }
+        let mut scaled = laws.clone();
+        scaled.g *= 3.0;
+        if calculate_enhanced_fitness(&scaled) != baseline {
+            found = true;
+            break;
+        }
+    }
+    assert!(
+        found,
+        "expected at least one viable map sample where scaling g changes fitness"
+    );
+}
+
+#[test]
+fn gravity_moves_chandrasekhar_even_if_fitness_stays_saturated() {
+    let mut laws = create_reference_universe();
+    let engine0 = AdvancedPhysicsEngine::new(laws.clone());
+    let (fitness0, _) = calculate_enhanced_fitness(&laws);
+    let m_ch0 = engine0.chandrasekhar_mass();
+    let jeans0 = engine0.calculate_jeans_mass();
+
+    laws.g *= 1.05;
+    let engine1 = AdvancedPhysicsEngine::new(laws.clone());
+    let (fitness1, _) = calculate_enhanced_fitness(&laws);
+    let m_ch1 = engine1.chandrasekhar_mass();
+    let jeans1 = engine1.calculate_jeans_mass();
+
+    assert_ne!(m_ch0, m_ch1);
+    assert_ne!(jeans0, jeans1);
+    // The score may stay put: several terms saturate at 0 or 1. Dependence
+    // of Chandrasekhar/Jeans is mathematical; fitness sensitivity is numerical.
+    let _fitness_may_saturate = (fitness0, fitness1);
+}
+
+#[test]
+fn reference_stays_below_heavy_element_stage() {
+    let (_fitness, level) = calculate_enhanced_fitness(&create_reference_universe());
+    assert_eq!(
+        level, 1,
+        "reference universe never reaches heavy_element_creation; e in Coulomb is dormant there"
+    );
 }
