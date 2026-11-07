@@ -99,6 +99,45 @@ GEOMETRIC_UNUSED_BY_FITNESS = [
     "temporal_rate",
 ]
 
+# HAR-MODEL-01B experimental CSVs. Not landscape_data_enhanced.csv / engine_evaluations.csv.
+RUNNING_COMPARE_COLUMNS = [
+    "sample_id",
+    "rng_seed",
+    "variant",
+    "epsilon",
+    "running_denominator",
+    "running_alpha_s_1gev",
+    "g_si",
+    "e_si",
+    "alpha_si",
+    "inverse_alpha_si",
+    "alpha_s_reference",
+    "alpha_s_mu_ref_gev",
+    "theoretical_proton_mass_kg",
+    "theoretical_neutron_mass_kg",
+    "theoretical_np_mass_diff_kg",
+    "theoretical_pion_mass_kg",
+    "validated_proton_mass_kg",
+    "validated_neutron_mass_kg",
+    "validated_pion_mass_kg",
+    "used_pdg_hadron_fallback",
+    "hubble_time_s",
+    "jeans_mass_kg",
+    "coulomb_barrier_j",
+    "chandrasekhar_mass_kg",
+    "nucleon_stability_gate_passed",
+    "cosmology_term",
+    "nucleosynthesis_term",
+    "stellar_term",
+    "heavy_element_term",
+    "black_hole_term",
+    "level_bonus_applied",
+    "complexity_level",
+    "fitness_uncapped",
+    "fitness",
+]
+RUNNING_COMPARE_NUMERIC = [c for c in RUNNING_COMPARE_COLUMNS if c != "variant"]
+
 # Optional EngineEvaluation export. `alpha_si` is α; never named `alpha` (map's 1/α).
 EVALUATION_COLUMNS = [
     "sample_id",
@@ -215,6 +254,15 @@ SCHEMA_GEOMETRIC = Schema(
     unused_by_fitness=tuple(GEOMETRIC_UNUSED_BY_FITNESS),
     notes="Geometric columns are sampled but do not enter calculate_enhanced_fitness.",
 )
+SCHEMA_RUNNING_COMPARE = Schema(
+    name="running-compare",
+    columns=tuple(RUNNING_COMPARE_COLUMNS),
+    numeric=tuple(RUNNING_COMPARE_NUMERIC),
+    notes=(
+        "HAR-MODEL-01B experimental export. variant is A/B/D; epsilon empty for A and D. "
+        "Empty optional stage cells are None, not zero. Not a VIS-01 historical file."
+    ),
+)
 SCHEMA_EVALUATION = Schema(
     name="engine-evaluation",
     columns=tuple(EVALUATION_COLUMNS),
@@ -300,6 +348,11 @@ def load_geometric(path: Path | str, *, allow_empty: bool = True) -> pd.DataFram
 def load_evaluations(path: Path | str, *, allow_empty: bool = True) -> pd.DataFrame:
     """Load EngineEvaluation CSV. Empty optional fields stay NaN; they are not filled with 0."""
     return load_csv(path, SCHEMA_EVALUATION, allow_empty=allow_empty)
+
+
+def load_running_compare(path: Path | str, *, allow_empty: bool = True) -> pd.DataFrame:
+    """Load a HAR-MODEL-01B variant CSV. Empty epsilon / stage cells stay NaN."""
+    return load_csv(path, SCHEMA_RUNNING_COMPARE, allow_empty=allow_empty)
 
 
 def reject_stub_csv(kind: str) -> None:

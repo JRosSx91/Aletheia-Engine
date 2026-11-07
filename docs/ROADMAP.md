@@ -89,7 +89,7 @@ HAR-01 (límites del motor) no tiene un SHA propio; está en [RESEARCH_LOG.md](R
 
 ## 5. En curso
 
-**HAR-MODEL-01A** cerrado (inventario y diseño: [HAR_MODEL_01.md](HAR_MODEL_01.md)). **HAR-MODEL-01B** definido, **no implementado**. **HAR-MODEL-01 no está completado** (no hay código ni ecuaciones nuevas en el motor).
+Nada en curso. Siguiente: **HAR-EXP-03**.
 
 ---
 
@@ -98,7 +98,7 @@ HAR-01 (límites del motor) no tiene un SHA propio; está en [RESEARCH_LOG.md](R
 Orden **orientativo**; se puede revisar tras cada experimento. Criterios = software y trazabilidad, no descubrimiento físico. HAR-PHYS-01 **no** bloquea EXP-03 ni EVO-01.
 
 1. **HAR-VISION-02** — Documentar P1–P4. *Hecho (documental); no implementado en código.*
-2. **HAR-MODEL-01** — Inventario del modelo QCD y comparación controlada de running. *01A cerrado (documental)* ([HAR_MODEL_01.md](HAR_MODEL_01.md)); *01B diseñado, no iniciado*; **HAR-MODEL-01 no completado**. Criterio de cierre futuro: comparación pareada A/B/D sin sustituir el CLI histórico.
+2. **HAR-MODEL-01** — Inventario del modelo QCD y comparación pareada A/B/D. *Hecho* ([HAR_MODEL_01.md](HAR_MODEL_01.md)). A es el default; B/D experimentales; B no validada como QCD. PHYS-01 sigue aparte.
 3. **HAR-EXP-03** — Barrido α_s con un `CosmicLaw` que pase `stellar_score > 0.4`, sin nuevas ecuaciones. Criterio: informe de gates Jeans/Chandrasekhar/pesados.
 4. **HAR-EVO-01** — Primer **optimizador experimental** de poblaciones de `CosmicLaw` (H-03): genoma, mutación, selección, control sin selección. **No** afirma selección cosmológica. H-04 (Smolin) queda separado y no se implementa aquí. Criterio: diseño escrito; stub sustituido solo si el hito lo pide; fitness sigue siendo índice interno.
 5. **HAR-PHYS-01** — Decisión explícita sobre aproximaciones físicas (p. ej. `running_alpha_s` / umbral 0.1). Opcional. No es requisito absoluto para seguir experimentando. Criterio: conservar línea base EXP-01/02 o versionar un motor nuevo sin reescribir hashes VIS-01 en silencio.
@@ -147,7 +147,7 @@ Detalle: [HARMONIC_VISION.md](HARMONIC_VISION.md) §2A.
 
 ## 9. Próximo hito recomendado
 
-**HAR-MODEL-01B** (experimento mínimo A / B / D, pareado VIS-01). No iniciar hasta autorización. No EXP-03 / `evolve` / PHYS-01 en ese hito salvo que se pida aparte. **HAR-MODEL-01 sigue abierto.**
+**HAR-EXP-03** — barrido α_s con un `CosmicLaw` que pase `stellar_score > 0.4`, sin nuevas ecuaciones. No `evolve` / PHYS-01 salvo autorización.
 
 ---
 

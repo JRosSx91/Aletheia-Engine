@@ -20,7 +20,33 @@ const NEUTRON_MASS_EMPIRICAL: f64 = 1.67492749804e-27;
 const ELECTRON_MASS_EXACT: f64 = 9.1093837015e-31;
 const PION_MASS_CHARGED: f64 = 2.48835417e-28; 
 
-const LAMBDA_QCD_GEV: f64 = 0.217; 
+const LAMBDA_QCD_GEV: f64 = 0.217;
+/// Historical `denominator > 0.1` threshold. Smooth B uses the same δ.
+pub(crate) const RUNNING_DENOM_THRESHOLD: f64 = 0.1;
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) const SMOOTH_EPS_DEFAULT: f64 = 0.02;
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) const SMOOTH_EPS_SENSITIVITY: [f64; 3] = [0.005, 0.02, 0.05];
+
+/// Internal running recipe. `new()` is always `Historical` (variant A).
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) enum RunningKind {
+    Historical,
+    Smooth { epsilon: f64 },
+    Constant,
+}
+
+impl RunningKind {
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn smooth(epsilon: f64) -> Self {
+        assert!(
+            epsilon > 0.0 && epsilon < RUNNING_DENOM_THRESHOLD,
+            "smooth ε must lie in (0, δ=0.1), got {epsilon}"
+        );
+        RunningKind::Smooth { epsilon }
+    }
+}
 
 pub struct AdvancedPhysicsEngine {
     pub laws: CosmicLaw,
@@ -28,6 +54,7 @@ pub struct AdvancedPhysicsEngine {
     pub alpha_s_reference: f64,
     pub reference_scale: f64,
     em_epsilon_0: f64,
+    running_kind: RunningKind,
 }
 
 impl AdvancedPhysicsEngine {
@@ -40,7 +67,15 @@ impl AdvancedPhysicsEngine {
             alpha_s_reference: laws.alpha_s,
             reference_scale: 91.1876,  
             em_epsilon_0: EPSILON_0,
+            running_kind: RunningKind::Historical,
         }
+    }
+
+    /// Comparison / tests only. Does not change `new()` or the public CLI.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn with_running_kind(mut self, kind: RunningKind) -> Self {
+        self.running_kind = kind;
+        self
     }
 
     /// Test-only EM context. Historical `new` is unchanged: α via `si_alpha`, Coulomb via SI ε₀.
@@ -54,27 +89,43 @@ impl AdvancedPhysicsEngine {
             alpha_s_reference: laws.alpha_s,
             reference_scale: 91.1876,
             em_epsilon_0: em.epsilon_0,
+            running_kind: RunningKind::Historical,
         }
     }
 
     pub fn running_alpha_s(&self, mu_gev: f64) -> f64 {
+        if matches!(self.running_kind, RunningKind::Constant) {
+            return self.alpha_s_reference;
+        }
+
         let lambda_qcd_gev = LAMBDA_QCD_GEV;
         
         if mu_gev <= lambda_qcd_gev * 1.5 {
             return self.alpha_s_reference;
         }
         
+        let denominator = self.running_denominator(mu_gev);
+        match self.running_kind {
+            RunningKind::Historical => {
+                if denominator > RUNNING_DENOM_THRESHOLD {
+                    self.alpha_s_reference / denominator
+                } else {
+                    self.alpha_s_reference
+                }
+            }
+            RunningKind::Smooth { epsilon } => {
+                smooth_alpha_s_from_denominator(self.alpha_s_reference, denominator, epsilon)
+            }
+            RunningKind::Constant => self.alpha_s_reference,
+        }
+    }
+
+    /// 1-loop denominator at `mu_gev` (same n_f / β₀ / μ_ref as historical running).
+    pub(crate) fn running_denominator(&self, mu_gev: f64) -> f64 {
         let nf = if mu_gev < 1.3 { 3.0 } else if mu_gev < 4.2 { 4.0 } else { 5.0 };
         let beta_0 = (11.0 * 3.0 - 2.0 * nf) / 3.0;
-        
         let log_ratio = (mu_gev / self.reference_scale).ln();
-        let denominator = 1.0 + (beta_0 * self.alpha_s_reference / (2.0 * PI)) * log_ratio;
-        
-        if denominator > 0.1 {
-            self.alpha_s_reference / denominator
-        } else {
-            self.alpha_s_reference
-        }
+        1.0 + (beta_0 * self.alpha_s_reference / (2.0 * PI)) * log_ratio
     }
     
     pub fn constituent_quark_mass(&self, bare_mass_kg: f64, flavor: &str) -> f64 {
@@ -530,6 +581,49 @@ impl AdvancedPhysicsEngine {
 
 pub fn calculate_enhanced_fitness(laws: &CosmicLaw) -> (f64, u8) {
     AdvancedPhysicsEngine::new(laws.clone()).compute_enhanced_fitness()
+}
+
+pub(crate) fn hermite_smoothstep(t: f64) -> f64 {
+    if t <= 0.0 {
+        0.0
+    } else if t >= 1.0 {
+        1.0
+    } else {
+        t * t * (3.0 - 2.0 * t)
+    }
+}
+
+/// Variant B: C¹ blend of α_s_ref and α_s_ref/d around d = δ. Not a QCD claim.
+pub(crate) fn smooth_alpha_s_from_denominator(alpha_s_ref: f64, d: f64, epsilon: f64) -> f64 {
+    let lo = RUNNING_DENOM_THRESHOLD - epsilon;
+    let hi = RUNNING_DENOM_THRESHOLD + epsilon;
+    if d <= lo {
+        alpha_s_ref
+    } else if d >= hi {
+        alpha_s_ref / d
+    } else {
+        let t = (d - lo) / (2.0 * epsilon);
+        let s = hermite_smoothstep(t);
+        alpha_s_ref * (1.0 + s * (1.0 / d - 1.0))
+    }
+}
+
+/// Analytic dα_B/dd inside and on the plateaus (for C¹ tests).
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn smooth_alpha_s_dd(alpha_s_ref: f64, d: f64, epsilon: f64) -> f64 {
+    let lo = RUNNING_DENOM_THRESHOLD - epsilon;
+    let hi = RUNNING_DENOM_THRESHOLD + epsilon;
+    if d <= lo {
+        0.0
+    } else if d >= hi {
+        -alpha_s_ref / (d * d)
+    } else {
+        let t = (d - lo) / (2.0 * epsilon);
+        let s = hermite_smoothstep(t);
+        let ds_dt = 6.0 * t * (1.0 - t);
+        let dt_dd = 1.0 / (2.0 * epsilon);
+        alpha_s_ref * (ds_dt * dt_dd * (1.0 / d - 1.0) - s / (d * d))
+    }
 }
 
 /// Historical PDG-substitution cut on theoretical nucleon masses (kg).

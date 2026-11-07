@@ -13,15 +13,18 @@ from find_adam import find_adam
 from harmonic_csv import (
     CsvSchemaError,
     EVALUATION_COLUMNS,
+    RUNNING_COMPARE_COLUMNS,
     load_alpha_fixed,
     load_evaluations,
     load_geometric,
     load_library,
     load_map,
+    load_running_compare,
     reject_stub_csv,
 )
 from plot_alphas_bifurcation import SCAN_COLUMNS, plot_alphas_bifurcation
 from plot_alphas_propagation import PROPAGATION_COLUMNS, plot_alphas_propagation
+from plot_running_compare import plot_running_compare
 from plot_observables import plot_observables
 from plot_alpha_fixed import plot_alpha_fixed
 from plot_geometric import plot_geometric
@@ -300,6 +303,52 @@ class AlphasPropagationPlotTests(unittest.TestCase):
             self.assertTrue("denominator" in text)
             self.assertIn("nucleosynthesis_term", text)
             self.assertNotIn("obs_alphas_vs_npdiff.html", text)
+
+
+RC_HEADER = ",".join(RUNNING_COMPARE_COLUMNS)
+
+
+def _rc_row(eval_row: str, variant: str, eps: str, denom: str, run: str, sample: str) -> str:
+    parts = eval_row.split(",")
+    parts[0] = sample
+    return ",".join([parts[0], parts[1], variant, eps, denom, run] + parts[2:])
+
+
+class RunningComparePlotTests(unittest.TestCase):
+    def test_loader_keeps_empty_epsilon_and_none_stages(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            row = _rc_row(EVAL_NONE_ROW, "A", "", "1.0000000000000000e-01", "1.1810000000000000e-01", "0")
+            path = _write(tmp, "A.csv", RC_HEADER + "\n" + row + "\n")
+            frame = load_running_compare(path)
+            self.assertEqual(frame.loc[0, "variant"], "A")
+            self.assertTrue(pd.isna(frame.loc[0, "epsilon"]))
+            self.assertTrue(pd.isna(frame.loc[0, "stellar_term"]))
+            self.assertNotEqual(frame.loc[0, "stellar_term"], 0)
+
+    def test_five_figures_caption_not_qcd(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+
+            def write_variant(name: str, variant: str, eps: str, run: str, fit_suffix: str) -> Path:
+                r0 = _rc_row(EVAL_ROW, variant, eps, "2.0000000000000000e-01", run, "0")
+                r1 = _rc_row(EVAL_NONE_ROW, variant, eps, "5.0000000000000000e-02", run, "1")
+                r0 = r0.rsplit(",", 1)[0] + "," + fit_suffix
+                return _write(tmp, name, RC_HEADER + "\n" + r0 + "\n" + r1 + "\n")
+
+            a = write_variant("variant_A_historical.csv", "A", "", "5.9000000000000000e-01", "3.9443933130404940e-01")
+            b = write_variant("variant_B_smooth_eps0p02.csv", "B", "2.0000000000000000e-02", "6.0000000000000000e-01", "4.0000000000000000e-01")
+            d = write_variant("variant_D_constant.csv", "D", "", "1.1810000000000000e-01", "3.5000000000000000e-01")
+            blo = write_variant("variant_B_smooth_eps0p005.csv", "B", "5.0000000000000000e-03", "5.9500000000000000e-01", "3.9600000000000000e-01")
+            bhi = write_variant("variant_B_smooth_eps0p05.csv", "B", "5.0000000000000000e-02", "6.2000000000000000e-01", "4.1000000000000000e-01")
+            out = tmp / "figs"
+            paths = plot_running_compare(a, b, d, blo, bhi, out, expected_n=2)
+            self.assertEqual(len(paths), 5)
+            text = paths["alphas"].read_text(encoding="utf-8")
+            self.assertIn("HAR-MODEL-01B", text)
+            self.assertIn("sample_id", text)
+            self.assertNotIn("QCD de laboratorio", text)
+            self.assertTrue((out / "paired_summary.json").is_file())
 
 
 if __name__ == "__main__":

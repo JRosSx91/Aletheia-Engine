@@ -1,6 +1,7 @@
-# HAR-MODEL-01A — Inventario y diseño de comparación del modelo QCD
+# HAR-MODEL-01 — Inventario y comparación pareada del modelo QCD
 
-Análisis técnico y diseño experimental. **No implementa ecuaciones.** HEAD de partida: `df04aa163f5ab7a7063ae042ac2f4f40d79260a1`.
+HAR-MODEL-01A: inventario y diseño (HEAD `df04aa1` / cierre `deff024`).
+HAR-MODEL-01B/C: comparación A/B/D sobre VIS-01. **Cerrado** como comparación: A es el default; B/D experimentales; B no validada como QCD. PHYS-01 sigue aparte.
 
 Línea base numérica: [HAR_EXP_01.md](HAR_EXP_01.md), [HAR_EXP_02.md](HAR_EXP_02.md). Una receta continua **no** es, por ese solo hecho, QCD de laboratorio.
 
@@ -212,7 +213,7 @@ Parámetros: μ_IR o m_IR. Continuidad: según el empalme. Positividad: si α_s_
 
 ---
 
-## 4. Diseño de HAR-MODEL-01B (no implementar aquí)
+## 4. Diseño de HAR-MODEL-01B (ejecutado)
 
 Experimento mínimo de comparación, **condicionado** a esta fórmula de B. No es HAR-EXP-03 (eso exige `stellar_score > 0.4`). No sustituye el CLI.
 
@@ -249,7 +250,7 @@ Opciones:
 2. **Plugins / trait pública.** Prematuro; empuja CLI y API.
 3. **Campo interno `RunningKind` (recomendado).** `new()` deja `Historical` (bitwise el `running_alpha_s` actual). Variantes solo en constructor `pub(crate)` / test / runner de comparación. Un `match` en `running_alpha_s`. Sin flag CLI. Sin segundo muestreo. `evaluate()` único. Masas quirales y binding **no** se duplican.
 
-**Aprobado:** opción 3. No implementar en 01A. Implementación (si se autoriza) = HAR-MODEL-01B, sin plugins y sin alterar la CLI pública.
+**Aprobado e implementado en 01B:** opción 3. `new()` = Historical. `with_running_kind` es `pub(crate)`. Sin plugins ni flag CLI.
 
 ---
 
@@ -275,20 +276,70 @@ Opciones:
 | Comparación | Pareada, mismos universos / semilla / `sample_id`; sin nuevo muestreo por variante |
 | ε | Inicial 0.02; sensibilidad {0.005, 0.02, 0.05}; **no** optimizar con el fitness |
 
-Diseño aprobado ≠ implementación. HAR-MODEL-01 **no** está cerrado.
+HAR-MODEL-01B implementa A/B/D. **A permanece el default** (`new()`, CLI). B y D son variantes experimentales internas. B **no** está físicamente validada. HAR-MODEL-01 (comparación) **cerrado**; HAR-PHYS-01 sigue aparte.
 
 ---
 
-## 8. Riesgos y decisiones aún abiertas
+## 8. Resultados HAR-MODEL-01B
 
-- B suaviza D1; D4–D14 siguen. Un Δfitness B−A no es evidencia cosmológica.
-- Constructor `pub(crate)` / test no debe filtrar a la CLI.
-- Tres CSV de ε multiplican artefactos; conviene un índice `variant`+`epsilon` estable.
-- ¿Tests de continuidad C¹ en Rust dentro de 01B, o solo la corrida pareada? (detalle de implementación, no bloquea la fórmula.)
-- C sigue pendiente de cita si se retoma.
+Población: 401 `CosmicLaw` de `map --universes 400 --rng-seed 137137`, un sorteo, cinco evaluaciones. CSV y HTML **fuera de Git**: `C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-model01b-runs\`.
+
+Hashes históricos (idénticos a HAR-VIS-01 / EXP-01):
+
+| Archivo | SHA-256 |
+|---|---|
+| `landscape_data_enhanced.csv` (map A) | `FC966CE1…649F9268` |
+| `engine_evaluations.csv` histórico | `2D19E32D…2CD0C715` |
+
+El CSV `variant_A_historical.csv` replica las columnas de evaluación del map (mismos `sample_id` y mismos observables); el schema añade `variant`, `epsilon`, `running_denominator`, `running_alpha_s_1gev`.
+
+En esta población, «fitness distinto» y «algún observable distinto» coinciden (el running a 1 GeV es el único conmutador).
+
+| Comparación | n fitness ≠ A | n algún observable ≠ A | n nivel | n gate nucleón | n stellar 0↔1 | max \|Δfitness\| | ids |
+|---|---:|---:|---:|---:|---:|---:|---|
+| B ε=0.02 | 2 | 2 | 0 | 0 | 0 | 0.0228 | 234, 297 |
+| B ε=0.005 | 1 | 1 | 0 | 0 | 0 | 0.0053 | banda más estrecha |
+| B ε=0.05 | 5 | 5 | 0 | 0 | 0 | 0.0280 | 5/6 con \|α_s−0.13923\|<0.01 |
+| D | 22 | 22 | 2 | 0 | 2 | 0.682 | las 22 *running* EXP-01; nivel 219 y 351 |
+
+Medianas globales de \|ΔX\| = 0. B no es QCD. D no es un modelo superior: apaga el 1-loop.
+
+### 8.1 Niveles 1→5 en `sample_id` 219 y 351 (variante D)
+
+El motor admite **0..=5** (`evaluate`, `engine.rs:484–526`; `library.rs:103–110` nombra el 5). No hay nivel 6. Condiciones, sin cambiarlas:
+
+| Nivel | Condición (sobre scores ya calculados) |
+|---|---|
+| 1 | `nucleosynthesis_score > 0.3` |
+| 2 | `stellar_score > 0.4` |
+| 3 | `heavy_elements_score > 0.5` |
+| 4 | `black_hole_score > 0.6` |
+| 5 | `black_hole_score > 0.8` **y** `heavy_elements_score > 0.7` (+ bonus 0.05) |
+
+Correspondencia de muestras: mismo `sample_id`, mismos `g` y `α_s_ref` en A y D (emparejado por id, no por orden de CSV). PDG=0. Nucleón y cosmología iguales.
+
+| id | A: α_s(1 GeV) | A stellar / heavy / BH / nivel / fitness | D: α_s(1 GeV) | D stellar / heavy / BH / nivel / fitness |
+|---|---:|---|---:|---|
+| 219 | 0.643 (running; denom 0.194) | **0.0** / None / None / **1** / 0.380 | 0.125 (=α_s_ref) | **1.0** / 1.0 / 1.0 / **5** / 1.0 (tope) |
+| 351 | 0.997 (running; denom 0.134) | **0.0** / None / None / **1** / 0.318 | 0.134 (=α_s_ref) | **1.0** / 1.0 / 1.0 / **5** / 1.0 |
+| 234, 297 | α_s_ref (cutoff A) | 0.0 / None / None / 1 | idéntico a A | idéntico a A |
+
+`stellar_term = 0.0` en A **no** es un `None` mal exportado: BBN>0.3 abre la etapa; `stellar_formation_details` (`engine.rs:366–385`) devuelve 0 si la vida Jeans &lt; 1 Myr. Con el 1-loop, m_p es menor (p. ej. 351: 7.82e-28 kg vs 9.73e-28 kg en D) → c_s mayor → M_Jeans mayor → vida ∝ M^(−2.5) cae bajo el umbral. D usa α_s_ref, m_p sube, Jeans entra en [1 Myr, 100 Gyr], `stellar_score=1>0.4`, y entonces pesados (gaussiana de **α_s_ref**, no del running) y BH puntúan 1. El 1→5 es **legítimo** según las reglas vigentes. B (ε=0.02) no mueve 219/351: denom fuera de [0.08, 0.12].
+
+Figuras Plotly (hover `sample_id`): `cmp_alphas_1gev.html`, `cmp_fitness_A_vs_B.html`, `cmp_delta_fitness.html`, `cmp_level_gates.html`, `cmp_epsilon_sensitivity.html`. No se tocaron figuras VIS-01 / EXP-01 / EXP-02.
+
+Tests: C⁰ en los bordes de banda; C¹ analítica `dα_B/dd` más diferencias centrales en el interior. En los nudos, un FD unilateral es O(h) porque f'' es grande (`s~t²`); eso es estabilidad numérica, no un fallo de C¹.
 
 ---
 
-## 9. Alcance de este cierre documental
+## 9. Riesgos y cierre
 
-QA de referencias (motor + `sim_modes/validate.rs`), consistencia con [HAR_EXP_01.md](HAR_EXP_01.md) / [HAR_EXP_02.md](HAR_EXP_02.md), fórmula B explícita. Sin Rust/Python/TypeScript. Sin EXP-03. Sin `evolve`.
+- B suaviza D1; D4–D14 siguen. Δfitness ≠ cosmología.
+- C aplazada (cita).
+- **Decisión:** conservar A como único `new()` / CLI. B y D quedan como `RunningKind` interno.
+
+---
+
+## 10. Alcance HAR-MODEL-01
+
+Cerrado como inventario + comparación pareada. PHYS-01 (¿sustituir el 1-loop?) sigue en cola. Sin EXP-03. Sin `evolve`.

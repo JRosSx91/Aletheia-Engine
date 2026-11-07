@@ -11,3 +11,7 @@ pub mod validate;
 
 #[cfg(test)]
 mod harmonic_regression;
+#[cfg(test)]
+mod running_compare;
+#[cfg(test)]
+mod running_kind_regression;

@@ -107,13 +107,24 @@ Estados de revisión: **cerrado** (commit local), **histórico** (pre-Harmonic o
 
 ---
 
+## HAR-MODEL-01 — Comparación A/B/D del running
+
+- **Pregunta.** Sensibilidad del motor al `if denom > 0.1` frente a un blend C¹ (B) y a no correr α_s (D).
+- **Método.** Un sorteo VIS-01 (`137137`, 401 ids); `RunningKind`; CSV por variante; Plotly pareado.
+- **Datos.** `Aletheia-Engine-har-model01b-runs\` (fuera de Git).
+- **Resultado.** A = histórico (hashes VIS-01). B ε=0.02 cambia **2/401** (234, 297), sin cambio de nivel. D cambia **22/401** (rama running EXP-01); 219 y 351 pasan de nivel 1 a 5 porque `stellar_term` pasa de 0.0 a 1.0 (Jeans), no por un error de CSV. Nivel máximo del motor = 5.
+- **Limitaciones.** B no es QCD. D no es un modelo físico mejor. D4–D14 siguen.
+- **Decisión.** Conservar A como default ([DECISIONS.md](DECISIONS.md) D-18). Informe [HAR_MODEL_01.md](HAR_MODEL_01.md).
+- **Revisión.** Cerrado en HAR-MODEL-01C.
+
+---
+
 ## Propuestos (no ejecutados)
 
 Orden: [ROADMAP.md](ROADMAP.md) §6.
 
 | Id | Pregunta breve |
 |---|---|
-| HAR-MODEL-01 | Inventario de límites del modelo vigente sin cambiar ecuaciones |
 | HAR-EXP-03 | ¿Un universo con `stellar>0.4` muestra más gates o el gaussiano pesado? |
 | HAR-EVO-01 | Primer optimizador experimental (no Smolin) |
 | HAR-PHYS-01 | ¿Se acota o cambia `running_alpha_s`? Opcional; no bloquea lo anterior |
