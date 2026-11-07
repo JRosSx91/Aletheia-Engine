@@ -63,6 +63,74 @@ fn close(a: f64, b: f64, rel: f64, abs: f64) {
     );
 }
 
+/// Iso-Alpha A/B/C. B rescales only MKSA (λ=4). C changes only `alpha_s` (+5 %).
+const ISO_LAMBDA_EM: f64 = 4.0;
+const ISO_ALPHA_S_FACTOR: f64 = 1.05;
+
+struct IsoAlphaEngines {
+    a: AdvancedPhysicsEngine,
+    b: AdvancedPhysicsEngine,
+    c: AdvancedPhysicsEngine,
+    laws_a: crate::core::models::CosmicLaw,
+    laws_b: crate::core::models::CosmicLaw,
+    laws_c: crate::core::models::CosmicLaw,
+}
+
+fn iso_alpha_engines() -> IsoAlphaEngines {
+    let laws_a = create_reference_universe();
+    let mut laws_b = laws_a.clone();
+    laws_b.e = laws_a.e * ISO_LAMBDA_EM.sqrt();
+    let mut laws_c = laws_a.clone();
+    laws_c.alpha_s = laws_a.alpha_s * ISO_ALPHA_S_FACTOR;
+    IsoAlphaEngines {
+        a: AdvancedPhysicsEngine::new(laws_a.clone()),
+        b: AdvancedPhysicsEngine::new_with_em(
+            laws_b.clone(),
+            EmParameters::si().with_scaled_epsilon0(ISO_LAMBDA_EM),
+        ),
+        c: AdvancedPhysicsEngine::new(laws_c.clone()),
+        laws_a,
+        laws_b,
+        laws_c,
+    }
+}
+
+/// `get_validated_hadron_masses` uses PDG if `empirical_validation` is on, or if
+/// theoretical (m_p, m_n) fail `m_p > 0 && m_n > m_p && m_p <= 2e-26 && m_n <= 2e-26`.
+/// Equality of the two tuples is not enough: assert the gate predicates and that
+/// validated is not the empirical substitution.
+fn assert_theoretical_hadron_branch(engine: &AdvancedPhysicsEngine) {
+    assert!(
+        !cfg!(feature = "empirical_validation"),
+        "Iso-Alpha tests must not run with empirical_validation (forced PDG)"
+    );
+    let theoretical = engine.get_theoretical_hadron_masses();
+    let validated = engine.get_validated_hadron_masses();
+    let empirical = engine.get_empirical_hadron_masses();
+    let (m_p, m_n, _) = theoretical;
+    assert!(m_p > 0.0, "theoretical m_p <= 0 would take the PDG branch");
+    assert!(
+        m_n > m_p,
+        "theoretical m_n <= m_p would take the PDG branch"
+    );
+    assert!(
+        m_p <= 2e-26,
+        "theoretical m_p > 2e-26 would take the PDG branch"
+    );
+    assert!(
+        m_n <= 2e-26,
+        "theoretical m_n > 2e-26 would take the PDG branch"
+    );
+    assert_eq!(
+        validated, theoretical,
+        "validated masses must be the theoretical tuple, not a replaced copy"
+    );
+    assert_ne!(
+        validated, empirical,
+        "validated masses match PDG; fallback substitution is active"
+    );
+}
+
 fn assert_finite_csv(path: &Path) {
     let text = fs::read_to_string(path).unwrap();
     for (i, line) in text.lines().enumerate().skip(1) {
@@ -587,4 +655,96 @@ fn iso_alpha_ab_coulomb_is_compared_without_fitness_gates() {
         2.0e-15,
         1.0e-18,
     );
+}
+
+#[test]
+fn iso_alpha_c_same_alpha_different_alpha_s() {
+    const REL: f64 = 2.0e-15;
+    let iso = iso_alpha_engines();
+
+    assert_eq!(iso.laws_a.e, iso.laws_c.e);
+    assert_eq!(iso.a.alpha, iso.c.alpha);
+    close(iso.a.alpha, si_alpha(iso.laws_a.e), REL, 1.0e-18);
+    assert_eq!(
+        iso.a.coulomb_barrier_energy(),
+        iso.c.coulomb_barrier_energy()
+    );
+
+    assert_ne!(iso.laws_a.alpha_s, iso.laws_c.alpha_s);
+    close(
+        iso.laws_c.alpha_s / iso.laws_a.alpha_s,
+        ISO_ALPHA_S_FACTOR,
+        REL,
+        1.0e-18,
+    );
+    let mut c_restored = iso.laws_c.clone();
+    c_restored.alpha_s = iso.laws_a.alpha_s;
+    assert_eq!(
+        iso.laws_a, c_restored,
+        "case C must differ from A only in alpha_s"
+    );
+
+    assert_theoretical_hadron_branch(&iso.a);
+    assert_theoretical_hadron_branch(&iso.c);
+
+    let run_a = iso.a.running_alpha_s(1.0);
+    let run_c = iso.c.running_alpha_s(1.0);
+    let bind_a = iso.a.realistic_qcd_binding("proton");
+    let bind_c = iso.c.realistic_qcd_binding("proton");
+    let (mp_a, mn_a, _) = iso.a.get_theoretical_hadron_masses();
+    let (mp_c, mn_c, _) = iso.c.get_theoretical_hadron_masses();
+    let dm_a = mn_a - mp_a;
+    let dm_c = mn_c - mp_c;
+
+    assert_ne!(run_a, run_c);
+    assert_ne!(bind_a, bind_c);
+    assert_ne!((mp_a, mn_a), (mp_c, mn_c));
+    assert_ne!(dm_a, dm_c);
+    assert_ne!(
+        iso.a.primordial_nucleosynthesis_success(),
+        iso.c.primordial_nucleosynthesis_success()
+    );
+
+    let (fit_a, level_a) = iso.a.compute_enhanced_fitness();
+    let (fit_c, level_c) = iso.c.compute_enhanced_fitness();
+    assert_eq!(level_a, 1, "reference stays below the Coulomb fitness gate");
+    assert_eq!(level_c, 1, "case C must not be forced through later gates");
+    let _fitness_is_not_habitability = (fit_a, fit_c);
+}
+
+#[test]
+fn iso_alpha_abc_invariants_and_which_observables_move() {
+    const REL: f64 = 2.0e-15;
+    let iso = iso_alpha_engines();
+
+    assert_eq!(iso.a.alpha, iso.c.alpha);
+    close(iso.a.alpha, iso.b.alpha, REL, 1.0e-18);
+    close(iso.b.alpha, iso.c.alpha, REL, 1.0e-18);
+    close(
+        iso.a.coulomb_barrier_energy(),
+        iso.b.coulomb_barrier_energy(),
+        REL,
+        1.0e-28,
+    );
+    assert_eq!(
+        iso.a.coulomb_barrier_energy(),
+        iso.c.coulomb_barrier_energy()
+    );
+    assert_eq!(iso.laws_a.alpha_s, iso.laws_b.alpha_s);
+    assert_ne!(iso.laws_a.alpha_s, iso.laws_c.alpha_s);
+
+    let th_a = iso.a.get_theoretical_hadron_masses();
+    let th_b = iso.b.get_theoretical_hadron_masses();
+    let th_c = iso.c.get_theoretical_hadron_masses();
+    assert_eq!(
+        th_a, th_b,
+        "EM-only rescaling must not move theoretical hadrons"
+    );
+    assert_ne!(th_a, th_c, "alpha_s must move theoretical hadrons");
+    assert_theoretical_hadron_branch(&iso.a);
+    assert_theoretical_hadron_branch(&iso.b);
+    assert_theoretical_hadron_branch(&iso.c);
+
+    assert_eq!(iso.a.running_alpha_s(1.0), iso.b.running_alpha_s(1.0));
+    assert_ne!(iso.a.running_alpha_s(1.0), iso.c.running_alpha_s(1.0));
 }
