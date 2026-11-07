@@ -21,6 +21,7 @@ from harmonic_csv import (
     reject_stub_csv,
 )
 from plot_alphas_bifurcation import SCAN_COLUMNS, plot_alphas_bifurcation
+from plot_alphas_propagation import PROPAGATION_COLUMNS, plot_alphas_propagation
 from plot_observables import plot_observables
 from plot_alpha_fixed import plot_alpha_fixed
 from plot_geometric import plot_geometric
@@ -264,6 +265,40 @@ class AlphasBifurcationPlotTests(unittest.TestCase):
             self.assertGreater(path.stat().st_size, 0)
             self.assertIn("running_alpha_s", text)
             self.assertTrue("denom \\u003e 0.1" in text or "denom > 0.1" in text)
+            self.assertNotIn("obs_alphas_vs_npdiff.html", text)
+
+
+PROP_HEADER = ",".join(PROPAGATION_COLUMNS)
+PROP_ROW_RUN = (
+    SCAN_ROW_RUN
+    + ",6.0000000000000000e-28,8.9000000000000000e-28,1,1.0000000000000000e+00,"
+    "9.0000000000000000e-01,1.0000000000000000e+00,1.0000000000000000e-02,,"
+    "0,1,3.9000000000000000e-01,3.9000000000000000e-01,1.0000000000000000e+32,0"
+)
+PROP_ROW_CUT = (
+    SCAN_ROW_CUT
+    + ",6.0000000000000000e-28,8.8000000000000000e-28,1,1.0000000000000000e+00,"
+    "8.0000000000000000e-01,1.0000000000000000e+00,8.0000000000000000e-03,,"
+    "0,1,3.8000000000000000e-01,3.8000000000000000e-01,1.0000000000000000e+32,0"
+)
+
+
+class AlphasPropagationPlotTests(unittest.TestCase):
+    def test_four_panels_mark_code_threshold_not_qcd_transition(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            scan = _write(
+                tmp,
+                "scan.csv",
+                PROP_HEADER + "\n" + PROP_ROW_RUN + "\n" + PROP_ROW_CUT + "\n",
+            )
+            out = tmp / "exp02_qcd_propagation.html"
+            path = plot_alphas_propagation(scan, out)
+            text = path.read_text(encoding="utf-8")
+            self.assertGreater(path.stat().st_size, 0)
+            self.assertIn("HAR-EXP-02", text)
+            self.assertTrue("denominator" in text)
+            self.assertIn("nucleosynthesis_term", text)
             self.assertNotIn("obs_alphas_vs_npdiff.html", text)
 
 

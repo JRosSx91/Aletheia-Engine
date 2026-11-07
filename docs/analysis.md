@@ -80,6 +80,8 @@ $vis = "C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-vis01-runs"
 & $py plot_observables.py --input "$vis\engine_evaluations.csv" --output-dir "$vis\figures" --rng-seed 137137
 $exp = "C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-exp01-runs"
 & $py plot_alphas_bifurcation.py --evaluations "$exp\reproduction\engine_evaluations.csv" --scan "$exp\alpha_s_scan.csv" --output "$exp\exp01_alphas_bifurcation.html"
+$exp2 = "C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-exp02-runs"
+& $py plot_alphas_propagation.py --scan "$exp2\alpha_s_scan.csv" --output "$exp2\exp02_qcd_propagation.html"
 & $py -m unittest test_harmonic_csv.py
 ```
 

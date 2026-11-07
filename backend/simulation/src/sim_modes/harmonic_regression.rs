@@ -1246,7 +1246,7 @@ fn hadronic_running_denominator(alpha_s_ref: f64) -> f64 {
     1.0 + (beta_0 * alpha_s_ref / (2.0 * PI)) * log_ratio
 }
 
-const ALPHA_S_SCAN_HEADERS: [&str; 8] = [
+const ALPHA_S_SCAN_HEADERS: [&str; 22] = [
     "alpha_s_reference",
     "running_denominator",
     "used_running_formula",
@@ -1255,7 +1255,28 @@ const ALPHA_S_SCAN_HEADERS: [&str; 8] = [
     "theoretical_neutron_mass_kg",
     "theoretical_np_mass_diff_kg",
     "used_pdg_hadron_fallback",
+    "theoretical_pion_mass_kg",
+    "validated_proton_mass_kg",
+    "nucleon_stability_gate_passed",
+    "cosmology_term",
+    "nucleosynthesis_term",
+    "stellar_term",
+    "heavy_element_term",
+    "black_hole_term",
+    "level_bonus_applied",
+    "complexity_level",
+    "fitness_uncapped",
+    "fitness",
+    "jeans_mass_kg",
+    "fitness_was_capped",
 ];
+
+fn scan_opt_f64(x: Option<f64>) -> String {
+    match x {
+        Some(v) => format!("{:.16e}", v),
+        None => String::new(),
+    }
+}
 
 fn reference_alpha_s_scan_values() -> Vec<f64> {
     let mut xs = vec![create_reference_universe().alpha_s];
@@ -1264,6 +1285,9 @@ fn reference_alpha_s_scan_values() -> Vec<f64> {
     }
     for i in 0..=200 {
         xs.push(0.12 + (0.16 - 0.12) * (i as f64) / 200.0);
+    }
+    for i in 0..=300 {
+        xs.push(0.1388 + (0.1398 - 0.1388) * (i as f64) / 300.0);
     }
     for i in 1..=80 {
         xs.push(0.25 + (2.0 - 0.25) * (i as f64) / 80.0);
@@ -1283,22 +1307,33 @@ fn write_reference_alpha_s_scan(path: &Path) {
         let denom = hadronic_running_denominator(alpha_s);
         let used_running = denom > 0.1;
         let run = engine.running_alpha_s(1.0);
-        let (mp, mn, _) = engine.get_theoretical_hadron_masses();
         let ev = engine.evaluate();
+        let o = &ev.observables;
+        let h = &ev.heuristic;
         body.push_str(&format!(
-            "{:.16e},{:.16e},{},{:.16e},{:.16e},{:.16e},{:.16e},{}\n",
+            "{:.16e},{:.16e},{},{:.16e},{:.16e},{:.16e},{:.16e},{},{:.16e},{:.16e},{},{},{},{},{},{},{},{},{:.16e},{:.16e},{},{}\n",
             alpha_s,
             denom,
             if used_running { 1 } else { 0 },
             run,
-            mp,
-            mn,
-            mn - mp,
-            if ev.observables.used_pdg_hadron_fallback {
-                1
-            } else {
-                0
-            }
+            o.theoretical_proton_mass_kg,
+            o.theoretical_neutron_mass_kg,
+            o.theoretical_np_mass_diff_kg,
+            if o.used_pdg_hadron_fallback { 1 } else { 0 },
+            o.theoretical_pion_mass_kg,
+            o.validated_proton_mass_kg,
+            if h.nucleon_stability_gate_passed { 1 } else { 0 },
+            scan_opt_f64(h.cosmology_term),
+            scan_opt_f64(h.nucleosynthesis_term),
+            scan_opt_f64(h.stellar_term),
+            scan_opt_f64(h.heavy_element_term),
+            scan_opt_f64(h.black_hole_term),
+            if h.level_bonus_applied { 1 } else { 0 },
+            h.complexity_level,
+            h.fitness_uncapped,
+            h.fitness,
+            scan_opt_f64(o.jeans_mass_kg),
+            if (h.fitness_uncapped - h.fitness).abs() > 0.0 { 1 } else { 0 },
         ));
     }
     fs::write(path, body).expect("write alpha_s scan");
@@ -1354,6 +1389,38 @@ fn alpha_s_scan_is_deterministic_and_matches_evaluate() {
     if let Ok(out) = std::env::var("HAR_EXP01_SCAN") {
         fs::copy(&p1, &out).expect("copy scan to HAR_EXP01_SCAN");
     }
+    if let Ok(out) = std::env::var("HAR_EXP02_SCAN") {
+        fs::copy(&p1, &out).expect("copy scan to HAR_EXP02_SCAN");
+    }
+}
+
+#[test]
+fn alpha_s_cutoff_propagates_to_masses_not_cosmology() {
+    let mut laws = create_reference_universe();
+    laws.alpha_s = 0.1390;
+    let below = AdvancedPhysicsEngine::new(laws.clone()).evaluate();
+    laws.alpha_s = 0.1395;
+    let above = AdvancedPhysicsEngine::new(laws).evaluate();
+    assert!(hadronic_running_denominator(0.1390) > 0.1);
+    assert!(hadronic_running_denominator(0.1395) <= 0.1);
+    assert!(!below.observables.used_pdg_hadron_fallback);
+    assert!(!above.observables.used_pdg_hadron_fallback);
+    let d_mp = (below.observables.theoretical_proton_mass_kg
+        - above.observables.theoretical_proton_mass_kg)
+        .abs();
+    let d_dm = (below.observables.theoretical_np_mass_diff_kg
+        - above.observables.theoretical_np_mass_diff_kg)
+        .abs();
+    assert!(d_mp / below.observables.theoretical_proton_mass_kg > 1e-3);
+    assert!(d_dm / below.observables.theoretical_np_mass_diff_kg > 1e-3);
+    assert_eq!(
+        below.heuristic.cosmology_term,
+        above.heuristic.cosmology_term
+    );
+    assert!(below.heuristic.nucleon_stability_gate_passed);
+    assert!(above.heuristic.nucleon_stability_gate_passed);
+    assert_eq!(below.heuristic.fitness, below.heuristic.fitness_uncapped);
+    assert_eq!(above.heuristic.fitness, above.heuristic.fitness_uncapped);
 }
 
 #[test]
