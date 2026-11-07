@@ -15,13 +15,13 @@ use super::library::{run_library_mode_to_path, LibraryExplorer, LIBRARY_CSV_HEAD
 use super::map::{
     run_mapping_mode_to_path, run_mapping_mode_to_paths, sample_mapped_universe, MAP_CSV_HEADERS,
 };
-use crate::physics::observables::EVALUATION_CSV_HEADERS;
 use super::validate::{create_reference_universe, run_scientific_validation_mode};
 use crate::physics::alpha::{si_alpha, AlphaTrace, EmParameters};
 use crate::physics::constants::*;
 use crate::physics::engine::{
     calculate_enhanced_fitness, hadron_masses_need_pdg, AdvancedPhysicsEngine,
 };
+use crate::physics::observables::EVALUATION_CSV_HEADERS;
 use crate::utils::HarmonicRng;
 use std::f64::consts::PI;
 use std::fs;
@@ -244,7 +244,10 @@ fn evaluation_csv_keeps_none_empty_on_nucleon_gate() {
     assert_eq!(row[0], "7");
     assert_eq!(row[2].parse::<f64>().unwrap(), laws.g);
     assert_eq!(row[3].parse::<f64>().unwrap(), laws.e);
-    assert!(row[16].is_empty(), "hubble must be empty when cosmology did not run");
+    assert!(
+        row[16].is_empty(),
+        "hubble must be empty when cosmology did not run"
+    );
     assert!(row[17].is_empty());
     assert!(row[18].is_empty());
     assert!(row[19].is_empty());
@@ -263,16 +266,11 @@ fn evaluation_csv_keeps_pdg_flag_and_nonfinite_tokens() {
     assert!(row[1].is_empty());
     assert_eq!(row[15], "1");
     let ref_laws = create_reference_universe();
-    let nan_row = crate::physics::observables::evaluation_csv_record(
-        1,
-        None,
-        &ref_laws,
-        &{
-            let mut ev = AdvancedPhysicsEngine::new(ref_laws.clone()).evaluate();
-            ev.observables.alpha = f64::NAN;
-            ev
-        },
-    );
+    let nan_row = crate::physics::observables::evaluation_csv_record(1, None, &ref_laws, &{
+        let mut ev = AdvancedPhysicsEngine::new(ref_laws.clone()).evaluate();
+        ev.observables.alpha = f64::NAN;
+        ev
+    });
     assert_eq!(nan_row[4], "nan");
     assert_ne!(nan_row[4], "");
 }
@@ -1065,8 +1063,7 @@ fn hubble_cut_records_time_but_skips_later_stages() {
     let ev = AdvancedPhysicsEngine::new(laws.clone()).evaluate();
     assert_eq!(ev.heuristic.cosmology_term, Some(0.0));
     assert!(ev.observables.hubble_time_s.is_some());
-    let expected =
-        (3.0 / (8.0 * PI * laws.g * laws.dark_energy_density)).sqrt();
+    let expected = (3.0 / (8.0 * PI * laws.g * laws.dark_energy_density)).sqrt();
     assert_eq!(ev.observables.hubble_time_s, Some(expected));
     assert!(ev.heuristic.nucleosynthesis_term.is_none());
     assert!(ev.observables.jeans_mass_kg.is_none());
@@ -1078,14 +1075,11 @@ fn hubble_cut_records_time_but_skips_later_stages() {
 
 #[test]
 fn resolve_and_validated_hadrons_stay_equivalent() {
-    let cases = [
-        create_reference_universe(),
-        {
-            let mut laws = create_reference_universe();
-            laws.alpha_s = 1.0e6;
-            laws
-        },
-    ];
+    let cases = [create_reference_universe(), {
+        let mut laws = create_reference_universe();
+        laws.alpha_s = 1.0e6;
+        laws
+    }];
     for laws in cases {
         let engine = AdvancedPhysicsEngine::new(laws);
         let ev = engine.evaluate();
@@ -1154,13 +1148,25 @@ fn hadron_pdg_predicate_covers_each_historical_condition() {
     let cap = 2e-26;
     let m_p = 1.0e-27;
     let m_n = 1.1e-27;
-    assert!(!hadron_masses_need_pdg(m_p, m_n), "ordinary theoretical pair");
+    assert!(
+        !hadron_masses_need_pdg(m_p, m_n),
+        "ordinary theoretical pair"
+    );
 
     assert!(hadron_masses_need_pdg(0.0, m_n), "m_p <= 0 at zero");
-    assert!(hadron_masses_need_pdg(-1.0e-31, m_n), "m_p <= 0 when negative");
+    assert!(
+        hadron_masses_need_pdg(-1.0e-31, m_n),
+        "m_p <= 0 when negative"
+    );
     assert!(hadron_masses_need_pdg(m_p, m_p), "m_n <= m_p when equal");
-    assert!(hadron_masses_need_pdg(m_p, m_p - 1.0e-40), "m_n <= m_p when lighter");
-    assert!(hadron_masses_need_pdg(cap + 1.0e-40, cap + 2.0e-40), "m_p > 2e-26");
+    assert!(
+        hadron_masses_need_pdg(m_p, m_p - 1.0e-40),
+        "m_n <= m_p when lighter"
+    );
+    assert!(
+        hadron_masses_need_pdg(cap + 1.0e-40, cap + 2.0e-40),
+        "m_p > 2e-26"
+    );
     assert!(hadron_masses_need_pdg(m_p, cap + 1.0e-40), "m_n > 2e-26");
 }
 
@@ -1172,13 +1178,19 @@ fn hadron_pdg_predicate_boundaries_use_historical_operators() {
         f64::MIN_POSITIVE,
         2.0 * f64::MIN_POSITIVE
     ));
-    assert!(hadron_masses_need_pdg(1.0e-27, 1.0e-27), "m_n <= m_p includes equality");
+    assert!(
+        hadron_masses_need_pdg(1.0e-27, 1.0e-27),
+        "m_n <= m_p includes equality"
+    );
     assert!(!hadron_masses_need_pdg(1.0e-27, 1.0e-27 * 1.000001));
     assert!(
         !hadron_masses_need_pdg(cap * 0.5, cap),
         "cap uses '>' so m_n == 2e-26 is still accepted"
     );
-    assert!(hadron_masses_need_pdg(cap, cap), "equal masses at the cap still fail m_n <= m_p");
+    assert!(
+        hadron_masses_need_pdg(cap, cap),
+        "equal masses at the cap still fail m_n <= m_p"
+    );
     assert!(hadron_masses_need_pdg(cap * 1.1, cap * 1.2));
     assert!(hadron_masses_need_pdg(1.0e-28, cap * 1.1));
 }
@@ -1224,4 +1236,155 @@ fn empirical_validation_forces_pdg_even_on_reference() {
     );
     assert_eq!(engine.get_validated_hadron_masses(), empirical);
     assert_ne!(theoretical, empirical);
+}
+
+/// 1-loop denominator used by `running_alpha_s` at μ=1 GeV (n_f=3, μ_ref=91.1876 GeV).
+fn hadronic_running_denominator(alpha_s_ref: f64) -> f64 {
+    let nf = 3.0;
+    let beta_0 = (11.0 * 3.0 - 2.0 * nf) / 3.0;
+    let log_ratio = (1.0_f64 / 91.1876).ln();
+    1.0 + (beta_0 * alpha_s_ref / (2.0 * PI)) * log_ratio
+}
+
+const ALPHA_S_SCAN_HEADERS: [&str; 8] = [
+    "alpha_s_reference",
+    "running_denominator",
+    "used_running_formula",
+    "running_alpha_s_1gev",
+    "theoretical_proton_mass_kg",
+    "theoretical_neutron_mass_kg",
+    "theoretical_np_mass_diff_kg",
+    "used_pdg_hadron_fallback",
+];
+
+fn reference_alpha_s_scan_values() -> Vec<f64> {
+    let mut xs = vec![create_reference_universe().alpha_s];
+    for i in 0..=400 {
+        xs.push(0.05 + (0.25 - 0.05) * (i as f64) / 400.0);
+    }
+    for i in 0..=200 {
+        xs.push(0.12 + (0.16 - 0.12) * (i as f64) / 200.0);
+    }
+    for i in 1..=80 {
+        xs.push(0.25 + (2.0 - 0.25) * (i as f64) / 80.0);
+    }
+    xs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    xs.dedup_by(|a, b| (*a - *b).abs() < 1e-15);
+    xs
+}
+
+fn write_reference_alpha_s_scan(path: &Path) {
+    let mut body = String::from(ALPHA_S_SCAN_HEADERS.join(","));
+    body.push('\n');
+    for alpha_s in reference_alpha_s_scan_values() {
+        let mut laws = create_reference_universe();
+        laws.alpha_s = alpha_s;
+        let engine = AdvancedPhysicsEngine::new(laws);
+        let denom = hadronic_running_denominator(alpha_s);
+        let used_running = denom > 0.1;
+        let run = engine.running_alpha_s(1.0);
+        let (mp, mn, _) = engine.get_theoretical_hadron_masses();
+        let ev = engine.evaluate();
+        body.push_str(&format!(
+            "{:.16e},{:.16e},{},{:.16e},{:.16e},{:.16e},{:.16e},{}\n",
+            alpha_s,
+            denom,
+            if used_running { 1 } else { 0 },
+            run,
+            mp,
+            mn,
+            mn - mp,
+            if ev.observables.used_pdg_hadron_fallback {
+                1
+            } else {
+                0
+            }
+        ));
+    }
+    fs::write(path, body).expect("write alpha_s scan");
+}
+
+#[test]
+fn alpha_s_running_cutoff_matches_engine_and_is_discontinuous() {
+    let below = 0.1390;
+    let above = 0.1395;
+    let d_below = hadronic_running_denominator(below);
+    let d_above = hadronic_running_denominator(above);
+    assert!(d_below > 0.1);
+    assert!(d_above <= 0.1);
+
+    let mut laws = create_reference_universe();
+    laws.alpha_s = below;
+    let eng_b = AdvancedPhysicsEngine::new(laws.clone());
+    close(eng_b.running_alpha_s(1.0), below / d_below, 1e-12, 1e-18);
+    let (mp_b, mn_b, _) = eng_b.get_theoretical_hadron_masses();
+
+    laws.alpha_s = above;
+    let eng_a = AdvancedPhysicsEngine::new(laws);
+    assert_eq!(eng_a.running_alpha_s(1.0), above);
+    let (mp_a, mn_a, _) = eng_a.get_theoretical_hadron_masses();
+
+    assert!(
+        (mn_b - mp_b) - (mn_a - mp_a) > 1e-32,
+        "Δm must jump down when the running cut returns α_s_reference"
+    );
+}
+
+#[test]
+fn alpha_s_scan_is_deterministic_and_matches_evaluate() {
+    let p1 = temp_csv("as-scan-a");
+    let p2 = temp_csv("as-scan-b");
+    write_reference_alpha_s_scan(&p1);
+    write_reference_alpha_s_scan(&p2);
+    assert_eq!(fs::read(&p1).unwrap(), fs::read(&p2).unwrap());
+    assert_eq!(csv_headers(&p1), ALPHA_S_SCAN_HEADERS);
+    let laws = create_reference_universe();
+    let ev = AdvancedPhysicsEngine::new(laws.clone()).evaluate();
+    let mut found = false;
+    for row in csv_data_rows(&p1) {
+        let as_ref: f64 = row[0].parse().unwrap();
+        if (as_ref - laws.alpha_s).abs() < 1e-18 {
+            let dm: f64 = row[6].parse().unwrap();
+            close(dm, ev.observables.theoretical_np_mass_diff_kg, 1e-12, 1e-40);
+            found = true;
+            break;
+        }
+    }
+    assert!(found, "scan must include a point near the reference α_s");
+    if let Ok(out) = std::env::var("HAR_EXP01_SCAN") {
+        fs::copy(&p1, &out).expect("copy scan to HAR_EXP01_SCAN");
+    }
+}
+
+#[test]
+fn seed_137137_sample_230_stays_on_running_side() {
+    let hist = temp_csv("exp01-hist");
+    let obs = temp_csv("exp01-obs");
+    run_mapping_mode_to_paths(400, Some(SEED_A), &hist, Some(&obs)).unwrap();
+    let rows = csv_data_rows(&obs);
+    assert_eq!(rows.len(), 401);
+    let row = rows.iter().find(|r| r[0] == "230").expect("sample_id 230");
+    let alpha_s: f64 = row[6].parse().unwrap();
+    assert!(
+        hadronic_running_denominator(alpha_s) > 0.1,
+        "sample 230 must remain on the denom>0.1 side, got α_s={alpha_s}"
+    );
+    let exported_dm: f64 = row[10].parse().unwrap();
+    let mut rng = HarmonicRng::new(Some(SEED_A));
+    let mut laws = None;
+    for _ in 0..=230 {
+        laws = Some(sample_mapped_universe(&mut rng));
+    }
+    let ev = AdvancedPhysicsEngine::new(laws.unwrap()).evaluate();
+    assert_eq!(exported_dm, ev.observables.theoretical_np_mass_diff_kg);
+    let row_297 = rows.iter().find(|r| r[0] == "297").expect("sample_id 297");
+    let alpha_s_297: f64 = row_297[6].parse().unwrap();
+    assert!(
+        hadronic_running_denominator(alpha_s_297) <= 0.1,
+        "sample 297 must remain on the denom≤0.1 side, got α_s={alpha_s_297}"
+    );
+    assert_eq!(
+        calculate_enhanced_fitness(&create_reference_universe()),
+        AdvancedPhysicsEngine::new(create_reference_universe()).compute_enhanced_fitness()
+    );
 }

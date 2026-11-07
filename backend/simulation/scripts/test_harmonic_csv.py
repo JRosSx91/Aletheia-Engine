@@ -20,6 +20,7 @@ from harmonic_csv import (
     load_map,
     reject_stub_csv,
 )
+from plot_alphas_bifurcation import SCAN_COLUMNS, plot_alphas_bifurcation
 from plot_observables import plot_observables
 from plot_alpha_fixed import plot_alpha_fixed
 from plot_geometric import plot_geometric
@@ -230,6 +231,40 @@ class EvaluationCsvTests(unittest.TestCase):
             self.assertIn("sample_id=3", card)
             for item in paths:
                 self.assertGreater(item.stat().st_size, 0)
+
+
+SCAN_HEADER = ",".join(SCAN_COLUMNS)
+SCAN_ROW_RUN = (
+    "1.2000000000000000e-01,2.2447200000000000e-01,1,5.3450000000000000e-01,"
+    "8.9000000000000000e-28,8.9200000000000000e-28,2.4000000000000000e-30,0"
+)
+SCAN_ROW_CUT = (
+    "1.5000000000000000e-01,-3.0000000000000000e-02,0,1.5000000000000000e-01,"
+    "8.8000000000000000e-28,8.8200000000000000e-28,2.2000000000000000e-30,0"
+)
+
+
+class AlphasBifurcationPlotTests(unittest.TestCase):
+    def test_overlay_html_mentions_code_branch_not_qcd_transition(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            ev = _write(
+                tmp,
+                "ev.csv",
+                EVAL_HEADER + "\n" + EVAL_ROW + "\n" + EVAL_NONE_ROW + "\n",
+            )
+            scan = _write(
+                tmp,
+                "scan.csv",
+                SCAN_HEADER + "\n" + SCAN_ROW_RUN + "\n" + SCAN_ROW_CUT + "\n",
+            )
+            out = tmp / "exp01_alphas_bifurcation.html"
+            path = plot_alphas_bifurcation(ev, scan, out)
+            text = path.read_text(encoding="utf-8")
+            self.assertGreater(path.stat().st_size, 0)
+            self.assertIn("running_alpha_s", text)
+            self.assertTrue("denom \\u003e 0.1" in text or "denom > 0.1" in text)
+            self.assertNotIn("obs_alphas_vs_npdiff.html", text)
 
 
 if __name__ == "__main__":

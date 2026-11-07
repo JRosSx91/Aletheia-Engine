@@ -78,6 +78,8 @@ $out = "C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har03-figures"
 & $py find_adam.py --input "$in\landscape_data_enhanced.csv" --output-json "$out\adam_summary.json"
 $vis = "C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-vis01-runs"
 & $py plot_observables.py --input "$vis\engine_evaluations.csv" --output-dir "$vis\figures" --rng-seed 137137
+$exp = "C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-exp01-runs"
+& $py plot_alphas_bifurcation.py --evaluations "$exp\reproduction\engine_evaluations.csv" --scan "$exp\alpha_s_scan.csv" --output "$exp\exp01_alphas_bifurcation.html"
 & $py -m unittest test_harmonic_csv.py
 ```
 
