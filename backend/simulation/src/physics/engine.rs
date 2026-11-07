@@ -1,6 +1,7 @@
 use crate::core::models::CosmicLaw;
 use crate::physics::alpha::si_alpha;
 use crate::physics::constants::*;
+use crate::physics::observables::{EngineEvaluation, HeuristicBreakdown, ModelObservables};
 use std::f64::consts::PI;
 
 #[cfg(test)]
@@ -373,57 +374,123 @@ impl AdvancedPhysicsEngine {
         }
     }
 
-    /// Same heuristic as `calculate_enhanced_fitness`, using this engine's α / ε₀.
-    pub(crate) fn compute_enhanced_fitness(&self) -> (f64, u8) {
-        let (mass_proton, mass_neutron, _mass_pion) = self.get_validated_hadron_masses();
-
-        if mass_proton >= mass_neutron || mass_proton + self.laws.mass_electron >= mass_neutron {
-            return (0.0, 0);
+    /// Same decision as `get_validated_hadron_masses`, plus the theoretical tuple from that walk.
+    fn resolve_hadron_masses(&self) -> ((f64, f64, f64), (f64, f64, f64), bool) {
+        if cfg!(feature = "empirical_validation") {
+            (
+                self.get_theoretical_hadron_masses(),
+                self.get_empirical_hadron_masses(),
+                true,
+            )
+        } else {
+            let theoretical = self.get_theoretical_hadron_masses();
+            let (m_p, m_n, _) = theoretical;
+            if m_p <= 0.0 || m_n <= m_p || m_p > 2e-26 || m_n > 2e-26 {
+                (theoretical, self.get_empirical_hadron_masses(), true)
+            } else {
+                (theoretical, theoretical, false)
+            }
         }
+    }
 
+    /// Same heuristic walk as `calculate_enhanced_fitness`, recording stages actually entered.
+    pub(crate) fn evaluate(&self) -> EngineEvaluation {
+        let (theoretical, validated, used_pdg_hadron_fallback) = self.resolve_hadron_masses();
+        let (mass_proton, mass_neutron, _) = validated;
+        let nucleon_ok =
+            !(mass_proton >= mass_neutron || mass_proton + self.laws.mass_electron >= mass_neutron);
+
+        let mut cosmology_term = None;
+        let mut nucleosynthesis_term = None;
+        let mut stellar_term = None;
+        let mut heavy_element_term = None;
+        let mut black_hole_term = None;
+        let mut level_bonus_applied = false;
+        let mut complexity_level = 0u8;
         let mut fitness = 0.0;
-        let mut complexity_level = 0;
 
-        let cosmic_viability = self.cosmological_viability();
-        if cosmic_viability < 0.1 {
-            return (0.0, 0);
-        }
-        fitness += 0.15 * cosmic_viability;
+        if nucleon_ok {
+            let cosmic_viability = self.cosmological_viability();
+            cosmology_term = Some(cosmic_viability);
+            if cosmic_viability >= 0.1 {
+                fitness += 0.15 * cosmic_viability;
 
-        let nucleosynthesis_score = self.primordial_nucleosynthesis_success();
-        fitness += 0.25 * nucleosynthesis_score;
+                let nucleosynthesis_score = self.primordial_nucleosynthesis_success();
+                nucleosynthesis_term = Some(nucleosynthesis_score);
+                fitness += 0.25 * nucleosynthesis_score;
 
-        if nucleosynthesis_score > 0.3 {
-            complexity_level = 1;
+                if nucleosynthesis_score > 0.3 {
+                    complexity_level = 1;
 
-            let stellar_score = self.stellar_formation_epoch();
-            fitness += 0.25 * stellar_score;
+                    let stellar_score = self.stellar_formation_epoch();
+                    stellar_term = Some(stellar_score);
+                    fitness += 0.25 * stellar_score;
 
-            if stellar_score > 0.4 {
-                complexity_level = 2;
+                    if stellar_score > 0.4 {
+                        complexity_level = 2;
 
-                let heavy_elements_score = self.heavy_element_creation();
-                fitness += 0.20 * heavy_elements_score;
+                        let heavy_elements_score = self.heavy_element_creation();
+                        heavy_element_term = Some(heavy_elements_score);
+                        fitness += 0.20 * heavy_elements_score;
 
-                if heavy_elements_score > 0.5 {
-                    complexity_level = 3;
+                        if heavy_elements_score > 0.5 {
+                            complexity_level = 3;
 
-                    let black_hole_score = self.black_hole_formation_potential();
-                    fitness += 0.15 * black_hole_score;
+                            let black_hole_score = self.black_hole_formation_potential();
+                            black_hole_term = Some(black_hole_score);
+                            fitness += 0.15 * black_hole_score;
 
-                    if black_hole_score > 0.6 {
-                        complexity_level = 4;
+                            if black_hole_score > 0.6 {
+                                complexity_level = 4;
 
-                        if black_hole_score > 0.8 && heavy_elements_score > 0.7 {
-                            complexity_level = 5;
-                            fitness += 0.05; // Bonus pequeño
+                                if black_hole_score > 0.8 && heavy_elements_score > 0.7 {
+                                    complexity_level = 5;
+                                    fitness += 0.05; // Bonus pequeño
+                                    level_bonus_applied = true;
+                                }
+                            }
                         }
                     }
                 }
             }
         }
 
-        (fitness.min(1.0), complexity_level)
+        let fitness_uncapped = fitness;
+        let fitness_capped = fitness.min(1.0);
+        let (tp, tn, _) = theoretical;
+        let observables = ModelObservables {
+            alpha: self.alpha,
+            alpha_s_reference: self.alpha_s_reference,
+            alpha_s_mu_ref_gev: self.reference_scale,
+            theoretical_proton_mass_kg: tp,
+            theoretical_neutron_mass_kg: tn,
+            theoretical_np_mass_diff_kg: tn - tp,
+            validated_proton_mass_kg: mass_proton,
+            validated_neutron_mass_kg: mass_neutron,
+            used_pdg_hadron_fallback,
+        };
+
+        EngineEvaluation {
+            observables,
+            heuristic: HeuristicBreakdown {
+                nucleon_stability_gate_passed: nucleon_ok,
+                cosmology_term,
+                nucleosynthesis_term,
+                stellar_term,
+                heavy_element_term,
+                black_hole_term,
+                level_bonus_applied,
+                complexity_level,
+                fitness_uncapped,
+                fitness: fitness_capped,
+            },
+        }
+    }
+
+    /// Same heuristic as `calculate_enhanced_fitness`, using this engine's α / ε₀.
+    pub(crate) fn compute_enhanced_fitness(&self) -> (f64, u8) {
+        let ev = self.evaluate();
+        (ev.heuristic.fitness, ev.heuristic.complexity_level)
     }
 }
 

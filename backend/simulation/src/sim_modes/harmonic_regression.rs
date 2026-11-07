@@ -748,3 +748,170 @@ fn iso_alpha_abc_invariants_and_which_observables_move() {
     assert_eq!(iso.a.running_alpha_s(1.0), iso.b.running_alpha_s(1.0));
     assert_ne!(iso.a.running_alpha_s(1.0), iso.c.running_alpha_s(1.0));
 }
+
+#[test]
+fn evaluate_fitness_is_bitwise_identical_to_historical_tuple() {
+    let laws = create_reference_universe();
+    let engine = AdvancedPhysicsEngine::new(laws.clone());
+    let ev = engine.evaluate();
+    assert_eq!(
+        (ev.heuristic.fitness, ev.heuristic.complexity_level),
+        calculate_enhanced_fitness(&laws)
+    );
+    assert_eq!(
+        (ev.heuristic.fitness, ev.heuristic.complexity_level),
+        engine.compute_enhanced_fitness()
+    );
+
+    let mut rng = HarmonicRng::new(Some(SEED_A));
+    for _ in 0..16 {
+        let laws = sample_mapped_universe(&mut rng);
+        let engine = AdvancedPhysicsEngine::new(laws.clone());
+        let ev = engine.evaluate();
+        assert_eq!(
+            (ev.heuristic.fitness, ev.heuristic.complexity_level),
+            calculate_enhanced_fitness(&laws)
+        );
+    }
+}
+
+#[test]
+fn reference_evaluation_does_not_invent_unreached_heuristic_stages() {
+    let ev = AdvancedPhysicsEngine::new(create_reference_universe()).evaluate();
+    assert!(ev.heuristic.nucleon_stability_gate_passed);
+    assert_eq!(ev.heuristic.cosmology_term, Some(1.0));
+    assert!(ev.heuristic.nucleosynthesis_term.is_some());
+    assert!(ev.heuristic.stellar_term.is_some());
+    assert_eq!(
+        ev.heuristic.stellar_term,
+        Some(0.0),
+        "stellar was evaluated; a zero score must stay Some(0.0), not None"
+    );
+    assert!(ev.heuristic.heavy_element_term.is_none());
+    assert!(ev.heuristic.black_hole_term.is_none());
+    assert!(!ev.heuristic.level_bonus_applied);
+    assert_eq!(ev.heuristic.complexity_level, 1);
+    assert_eq!(ev.heuristic.fitness, ev.heuristic.fitness_uncapped.min(1.0));
+    assert!(!ev.observables.used_pdg_hadron_fallback);
+    assert_eq!(
+        ev.observables.validated_proton_mass_kg,
+        ev.observables.theoretical_proton_mass_kg
+    );
+}
+
+#[test]
+fn nucleon_gate_failure_leaves_later_heuristic_terms_none() {
+    let mut laws = create_reference_universe();
+    laws.mass_electron = 1.0e-27;
+    let ev = AdvancedPhysicsEngine::new(laws).evaluate();
+    assert!(!ev.heuristic.nucleon_stability_gate_passed);
+    assert!(ev.heuristic.cosmology_term.is_none());
+    assert!(ev.heuristic.nucleosynthesis_term.is_none());
+    assert!(ev.heuristic.stellar_term.is_none());
+    assert!(ev.heuristic.heavy_element_term.is_none());
+    assert!(ev.heuristic.black_hole_term.is_none());
+    assert_eq!(ev.heuristic.fitness, 0.0);
+    assert_eq!(ev.heuristic.complexity_level, 0);
+    assert!(!ev.heuristic.level_bonus_applied);
+}
+
+#[test]
+fn cosmological_cut_records_evaluated_zero_and_skips_later_stages() {
+    let mut laws = create_reference_universe();
+    laws.g = 1.0e20;
+    let ev = AdvancedPhysicsEngine::new(laws.clone()).evaluate();
+    assert!(ev.heuristic.nucleon_stability_gate_passed);
+    assert_eq!(ev.heuristic.cosmology_term, Some(0.0));
+    assert!(ev.heuristic.nucleosynthesis_term.is_none());
+    assert!(ev.heuristic.stellar_term.is_none());
+    assert!(ev.heuristic.heavy_element_term.is_none());
+    assert!(ev.heuristic.black_hole_term.is_none());
+    assert_eq!(ev.heuristic.fitness, 0.0);
+    assert_eq!(ev.heuristic.complexity_level, 0);
+    assert_eq!(
+        (ev.heuristic.fitness, ev.heuristic.complexity_level),
+        calculate_enhanced_fitness(&laws)
+    );
+}
+
+#[test]
+fn pdg_fallback_flag_follows_validation_branch_not_mass_equality() {
+    let engine = AdvancedPhysicsEngine::new(create_reference_universe());
+    let ev = engine.evaluate();
+    let (tp, tn, _) = engine.get_theoretical_hadron_masses();
+    let (ep, en, _) = engine.get_empirical_hadron_masses();
+    let (vp, vn, _) = engine.get_validated_hadron_masses();
+    let validity_cut = tp <= 0.0 || tn <= tp || tp > 2e-26 || tn > 2e-26;
+    let expect_pdg = cfg!(feature = "empirical_validation") || validity_cut;
+    assert_eq!(ev.observables.used_pdg_hadron_fallback, expect_pdg);
+    assert_eq!(ev.observables.theoretical_proton_mass_kg, tp);
+    assert_eq!(ev.observables.theoretical_neutron_mass_kg, tn);
+    assert_eq!(ev.observables.validated_proton_mass_kg, vp);
+    assert_eq!(ev.observables.validated_neutron_mass_kg, vn);
+    if expect_pdg {
+        assert_eq!(vp, ep);
+        assert_eq!(vn, en);
+    } else {
+        assert_eq!(vp, tp);
+        assert_eq!(vn, tn);
+    }
+}
+
+#[test]
+fn invalid_theoretical_hadrons_set_pdg_flag_and_keep_theory_fields() {
+    if cfg!(feature = "empirical_validation") {
+        return;
+    }
+    let mut laws = create_reference_universe();
+    laws.alpha_s = 1.0e6;
+    let engine = AdvancedPhysicsEngine::new(laws);
+    let (tp, tn, _) = engine.get_theoretical_hadron_masses();
+    assert!(
+        tp <= 0.0 || tn <= tp || tp > 2e-26 || tn > 2e-26,
+        "alpha_s=1e6 must trip the existing validity cut, got m_p={tp} m_n={tn}"
+    );
+    let ev = engine.evaluate();
+    let (ep, en, _) = engine.get_empirical_hadron_masses();
+    assert!(ev.observables.used_pdg_hadron_fallback);
+    assert_eq!(ev.observables.theoretical_proton_mass_kg, tp);
+    assert_eq!(ev.observables.theoretical_neutron_mass_kg, tn);
+    assert_eq!(ev.observables.validated_proton_mass_kg, ep);
+    assert_eq!(ev.observables.validated_neutron_mass_kg, en);
+}
+
+#[test]
+fn evaluate_preserves_iso_alpha_abc_split() {
+    let iso = iso_alpha_engines();
+    let ea = iso.a.evaluate();
+    let eb = iso.b.evaluate();
+    let ec = iso.c.evaluate();
+    assert_eq!(ea.observables.alpha, ec.observables.alpha);
+    close(ea.observables.alpha, eb.observables.alpha, 2.0e-15, 1.0e-18);
+    assert_eq!(
+        ea.observables.theoretical_proton_mass_kg,
+        eb.observables.theoretical_proton_mass_kg
+    );
+    assert_ne!(
+        ea.observables.theoretical_proton_mass_kg,
+        ec.observables.theoretical_proton_mass_kg
+    );
+    assert_eq!(
+        ea.observables.alpha_s_reference,
+        eb.observables.alpha_s_reference
+    );
+    assert_ne!(
+        ea.observables.alpha_s_reference,
+        ec.observables.alpha_s_reference
+    );
+    assert!(!ea.observables.used_pdg_hadron_fallback);
+    assert!(!eb.observables.used_pdg_hadron_fallback);
+    assert!(!ec.observables.used_pdg_hadron_fallback);
+    assert_eq!(
+        (ea.heuristic.fitness, ea.heuristic.complexity_level),
+        iso.a.compute_enhanced_fitness()
+    );
+    assert_eq!(
+        (ec.heuristic.fitness, ec.heuristic.complexity_level),
+        iso.c.compute_enhanced_fitness()
+    );
+}
