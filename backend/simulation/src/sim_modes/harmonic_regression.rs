@@ -14,7 +14,7 @@ use super::harmonic::run_harmonic_mode;
 use super::library::{run_library_mode_to_path, LibraryExplorer, LIBRARY_CSV_HEADERS};
 use super::map::{run_mapping_mode_to_path, sample_mapped_universe, MAP_CSV_HEADERS};
 use super::validate::{create_reference_universe, run_scientific_validation_mode};
-use crate::physics::alpha::{si_alpha, AlphaTrace};
+use crate::physics::alpha::{si_alpha, AlphaTrace, EmParameters};
 use crate::physics::constants::*;
 use crate::physics::engine::{calculate_enhanced_fitness, AdvancedPhysicsEngine};
 use crate::utils::HarmonicRng;
@@ -51,6 +51,16 @@ fn csv_data_rows(path: &Path) -> Vec<Vec<String>> {
         .filter(|l| !l.is_empty())
         .map(|l| l.split(',').map(|s| s.to_string()).collect())
         .collect()
+}
+
+fn close(a: f64, b: f64, rel: f64, abs: f64) {
+    let diff = (a - b).abs();
+    let scale = a.abs().max(b.abs());
+    assert!(
+        diff <= abs || diff <= rel * scale.max(f64::MIN_POSITIVE),
+        "{a} vs {b}: abs_diff={diff}, rel_diff={}",
+        diff / scale.max(f64::MIN_POSITIVE)
+    );
 }
 
 fn assert_finite_csv(path: &Path) {
@@ -459,5 +469,122 @@ fn reference_stays_below_heavy_element_stage() {
     assert_eq!(
         level, 1,
         "reference universe never reaches heavy_element_creation; e in Coulomb is dormant there"
+    );
+}
+
+#[test]
+fn si_em_override_matches_historical_new_bitwise() {
+    let laws = create_reference_universe();
+    let historical = AdvancedPhysicsEngine::new(laws.clone());
+    let via_em = AdvancedPhysicsEngine::new_with_em(laws.clone(), EmParameters::si());
+    assert_eq!(historical.alpha, si_alpha(laws.e));
+    assert_eq!(via_em.alpha, historical.alpha);
+    assert_eq!(
+        via_em.coulomb_barrier_energy(),
+        historical.coulomb_barrier_energy()
+    );
+    assert_eq!(
+        via_em.compute_enhanced_fitness(),
+        historical.compute_enhanced_fitness()
+    );
+    assert_eq!(
+        calculate_enhanced_fitness(&laws),
+        historical.compute_enhanced_fitness()
+    );
+}
+
+#[test]
+fn iso_alpha_ab_lambda_4_is_equivalent_representation() {
+    const LAMBDA: f64 = 4.0;
+    const REL: f64 = 2.0e-15;
+    const ABS_ALPHA: f64 = 1.0e-18;
+    const ABS_COULOMB: f64 = 1.0e-28;
+
+    let laws_a = create_reference_universe();
+    let mut laws_b = laws_a.clone();
+    laws_b.e = laws_a.e * LAMBDA.sqrt();
+
+    let engine_a = AdvancedPhysicsEngine::new(laws_a.clone());
+    let engine_b = AdvancedPhysicsEngine::new_with_em(
+        laws_b.clone(),
+        EmParameters::si().with_scaled_epsilon0(LAMBDA),
+    );
+    let engine_b_si = AdvancedPhysicsEngine::new(laws_b.clone());
+
+    assert!(
+        (engine_b_si.alpha - engine_a.alpha).abs() / engine_a.alpha > 1.0e-6,
+        "without EM context, scaling only e must look like a different SI α"
+    );
+
+    close(engine_a.alpha, engine_b.alpha, REL, ABS_ALPHA);
+    close(
+        laws_a.e.powi(2) / EPSILON_0,
+        laws_b.e.powi(2) / (EPSILON_0 * LAMBDA),
+        REL,
+        ABS_COULOMB,
+    );
+    close(
+        engine_a.coulomb_barrier_energy(),
+        engine_b.coulomb_barrier_energy(),
+        REL,
+        ABS_COULOMB,
+    );
+    close(
+        engine_a.heavy_element_creation(),
+        engine_b.heavy_element_creation(),
+        REL,
+        1.0e-18,
+    );
+
+    let (mp_a, mn_a, mpi_a) = engine_a.get_theoretical_hadron_masses();
+    let (mp_b, mn_b, mpi_b) = engine_b.get_theoretical_hadron_masses();
+    assert_eq!((mp_a, mn_a, mpi_a), (mp_b, mn_b, mpi_b));
+    assert_eq!(engine_a.laws.alpha_s, engine_b.laws.alpha_s);
+    close(
+        mp_a / laws_a.mass_electron,
+        mp_b / laws_b.mass_electron,
+        REL,
+        1.0e-12,
+    );
+
+    close(
+        engine_a.primordial_nucleosynthesis_success(),
+        engine_b.primordial_nucleosynthesis_success(),
+        REL,
+        1.0e-18,
+    );
+    assert_eq!(
+        engine_a.stellar_formation_epoch(),
+        engine_b.stellar_formation_epoch()
+    );
+
+    let fit_a = engine_a.compute_enhanced_fitness();
+    let fit_b = engine_b.compute_enhanced_fitness();
+    assert_eq!(fit_a.1, 1);
+    assert_eq!(fit_a.1, fit_b.1);
+    close(fit_a.0, fit_b.0, REL, 1.0e-18);
+}
+
+#[test]
+fn iso_alpha_ab_coulomb_is_compared_without_fitness_gates() {
+    const LAMBDA: f64 = 4.0;
+    let mut rng = HarmonicRng::new(Some(SEED_A));
+    let first = sample_mapped_universe(&mut rng);
+    let mut laws_b = first.clone();
+    laws_b.e = first.e * LAMBDA.sqrt();
+    let engine_a = AdvancedPhysicsEngine::new(first);
+    let engine_b =
+        AdvancedPhysicsEngine::new_with_em(laws_b, EmParameters::si().with_scaled_epsilon0(LAMBDA));
+    close(
+        engine_a.coulomb_barrier_energy(),
+        engine_b.coulomb_barrier_energy(),
+        2.0e-15,
+        1.0e-28,
+    );
+    close(
+        engine_a.heavy_element_creation(),
+        engine_b.heavy_element_creation(),
+        2.0e-15,
+        1.0e-18,
     );
 }

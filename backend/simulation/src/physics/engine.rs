@@ -3,6 +3,9 @@ use crate::physics::alpha::si_alpha;
 use crate::physics::constants::*;
 use std::f64::consts::PI;
 
+#[cfg(test)]
+use crate::physics::alpha::{alpha_from_em_parameters, EmParameters};
+
 const KEV_TO_JOULE: f64 = 1.602176634e-16;
 const MEV_TO_JOULE: f64 = 1.602176634e-13;
 const GEV_TO_JOULE: f64 = 1.602176634e-10;
@@ -22,7 +25,8 @@ pub struct AdvancedPhysicsEngine {
     pub laws: CosmicLaw,
     pub alpha: f64,
     pub alpha_s_reference: f64,
-    pub reference_scale: f64, 
+    pub reference_scale: f64,
+    em_epsilon_0: f64,
 }
 
 impl AdvancedPhysicsEngine {
@@ -34,6 +38,21 @@ impl AdvancedPhysicsEngine {
             alpha,
             alpha_s_reference: laws.alpha_s,
             reference_scale: 91.1876,  
+            em_epsilon_0: EPSILON_0,
+        }
+    }
+
+    /// Test-only EM context. Historical `new` is unchanged: α via `si_alpha`, Coulomb via SI ε₀.
+    /// Chandrasekhar and kg↔GeV still use global `C` / `H_BAR`.
+    #[cfg(test)]
+    pub fn new_with_em(laws: CosmicLaw, em: EmParameters) -> Self {
+        let alpha = alpha_from_em_parameters(laws.e, em.epsilon_0, em.hbar, em.c);
+        Self {
+            laws: laws.clone(),
+            alpha,
+            alpha_s_reference: laws.alpha_s,
+            reference_scale: 91.1876,
+            em_epsilon_0: em.epsilon_0,
         }
     }
 
@@ -308,6 +327,12 @@ impl AdvancedPhysicsEngine {
 
         1.0
     }
+
+    /// Coulomb barrier used by `heavy_element_creation` (r ~ 10 fm). Same ε₀ as α.
+    pub fn coulomb_barrier_energy(&self) -> f64 {
+        (2.0 * 4.0 * self.laws.e.powi(2)) / (4.0 * PI * self.em_epsilon_0 * 1e-14)
+    }
+
     pub fn heavy_element_creation(&self) -> f64 {
     let core_temp = 1.5e8; // 150 MK
     let thermal_energy_joules = K_B * core_temp;
@@ -315,7 +340,7 @@ impl AdvancedPhysicsEngine {
     let hoyle_resonance_offset_joules = 379e3 * 1.60218e-19; // 379 keV en Joules
 
     let reduced_mass = (4.0 * 8.0) / (4.0 + 8.0) * PROTON_MASS_EMPIRICAL; // Masa reducida de He-4 y Be-8
-    let coulomb_barrier_energy = (2.0 * 4.0 * self.laws.e.powi(2)) / (4.0 * PI * EPSILON_0 * 1e-14); // r ~ 10 fm
+    let coulomb_barrier_energy = self.coulomb_barrier_energy(); // r ~ 10 fm
     
     let gamow_factor = (coulomb_barrier_energy / thermal_energy_joules).sqrt();
     let tunnel_probability = (-3.0 * gamow_factor / 2.0).exp();
@@ -347,58 +372,61 @@ impl AdvancedPhysicsEngine {
             (typical_massive_star / tov_limit).powf(1.5)
         }
     }
-}
 
-pub fn calculate_enhanced_fitness(laws: &CosmicLaw) -> (f64, u8) {
-    let engine = AdvancedPhysicsEngine::new(laws.clone());
-    
-    let (mass_proton, mass_neutron, _mass_pion) = engine.get_validated_hadron_masses();
+    /// Same heuristic as `calculate_enhanced_fitness`, using this engine's α / ε₀.
+    pub(crate) fn compute_enhanced_fitness(&self) -> (f64, u8) {
+        let (mass_proton, mass_neutron, _mass_pion) = self.get_validated_hadron_masses();
 
-    if mass_proton >= mass_neutron || mass_proton + laws.mass_electron >= mass_neutron {
-        return (0.0, 0);
-    }
+        if mass_proton >= mass_neutron || mass_proton + self.laws.mass_electron >= mass_neutron {
+            return (0.0, 0);
+        }
 
-    let mut fitness = 0.0;
-    let mut complexity_level = 0;
+        let mut fitness = 0.0;
+        let mut complexity_level = 0;
 
-    let cosmic_viability = engine.cosmological_viability();
-    if cosmic_viability < 0.1 {
-        return (0.0, 0);
-    }
-    fitness += 0.15 * cosmic_viability;
+        let cosmic_viability = self.cosmological_viability();
+        if cosmic_viability < 0.1 {
+            return (0.0, 0);
+        }
+        fitness += 0.15 * cosmic_viability;
 
-    let nucleosynthesis_score = engine.primordial_nucleosynthesis_success();
-    fitness += 0.25 * nucleosynthesis_score;
+        let nucleosynthesis_score = self.primordial_nucleosynthesis_success();
+        fitness += 0.25 * nucleosynthesis_score;
 
-    if nucleosynthesis_score > 0.3 {
-        complexity_level = 1;
+        if nucleosynthesis_score > 0.3 {
+            complexity_level = 1;
 
-        let stellar_score = engine.stellar_formation_epoch();
-        fitness += 0.25 * stellar_score;
+            let stellar_score = self.stellar_formation_epoch();
+            fitness += 0.25 * stellar_score;
 
-        if stellar_score > 0.4 {
-            complexity_level = 2;
+            if stellar_score > 0.4 {
+                complexity_level = 2;
 
-            let heavy_elements_score = engine.heavy_element_creation();
-            fitness += 0.20 * heavy_elements_score;
+                let heavy_elements_score = self.heavy_element_creation();
+                fitness += 0.20 * heavy_elements_score;
 
-            if heavy_elements_score > 0.5 {
-                complexity_level = 3;
+                if heavy_elements_score > 0.5 {
+                    complexity_level = 3;
 
-                let black_hole_score = engine.black_hole_formation_potential();
-                fitness += 0.15 * black_hole_score;
+                    let black_hole_score = self.black_hole_formation_potential();
+                    fitness += 0.15 * black_hole_score;
 
-                if black_hole_score > 0.6 {
-                    complexity_level = 4;
+                    if black_hole_score > 0.6 {
+                        complexity_level = 4;
 
-                    if black_hole_score > 0.8 && heavy_elements_score > 0.7 {
-                        complexity_level = 5;
-                        fitness += 0.05; // Bonus pequeño
+                        if black_hole_score > 0.8 && heavy_elements_score > 0.7 {
+                            complexity_level = 5;
+                            fitness += 0.05; // Bonus pequeño
+                        }
                     }
                 }
             }
         }
-    }
 
-    (fitness.min(1.0), complexity_level)
+        (fitness.min(1.0), complexity_level)
+    }
+}
+
+pub fn calculate_enhanced_fitness(laws: &CosmicLaw) -> (f64, u8) {
+    AdvancedPhysicsEngine::new(laws.clone()).compute_enhanced_fitness()
 }

@@ -13,6 +13,35 @@ pub fn si_alpha(e: f64) -> f64 {
     e.powi(2) / (4.0 * PI * EPSILON_0 * H_BAR * C)
 }
 
+/// Vacuum constants for the MKSA α / Coulomb pair. Default is historical SI.
+/// Charge `e` stays on `CosmicLaw`; this type does not replace it.
+#[cfg(test)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EmParameters {
+    pub epsilon_0: f64,
+    pub hbar: f64,
+    pub c: f64,
+}
+
+#[cfg(test)]
+impl EmParameters {
+    pub fn si() -> Self {
+        Self {
+            epsilon_0: EPSILON_0,
+            hbar: H_BAR,
+            c: C,
+        }
+    }
+
+    /// Scale ε₀ only. Pair with `e' = e √λ` to keep α and `e²/ε₀` invariant. Leaves ħ and c unchanged.
+    pub fn with_scaled_epsilon0(self, lambda: f64) -> Self {
+        Self {
+            epsilon_0: self.epsilon_0 * lambda,
+            ..self
+        }
+    }
+}
+
 /// α reconstructed from construction-time electromagnetic parameters.
 ///
 /// Same algebra as `si_alpha`, but the vacuum constants are arguments.
