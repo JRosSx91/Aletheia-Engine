@@ -282,7 +282,7 @@ HAR-MODEL-01B implementa A/B/D. **A permanece el default** (`new()`, CLI). B y D
 
 ## 8. Resultados HAR-MODEL-01B
 
-Población: 401 `CosmicLaw` de `map --universes 400 --rng-seed 137137`, un sorteo, cinco evaluaciones. CSV y HTML **fuera de Git**: `C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-model01b-runs\`.
+Población: 401 `CosmicLaw` de `map --universes 400 --rng-seed 137137`, un sorteo, cinco evaluaciones. CSV y HTML **fuera de Git**: carpeta hermana `../Aletheia-Engine-har-model01b-runs/`.
 
 Hashes históricos (idénticos a HAR-VIS-01 / EXP-01):
 

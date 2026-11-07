@@ -4,7 +4,7 @@ Fuente de verdad operativa. Complementa, no sustituye: [HARMONIC_VISION.md](HARM
 
 Un test verde es **regresión de software**, no validación científica. No hay fechas de entrega.
 
-**Línea base de experimentos:** `e5506541a2c5e22a309617cadd0b10af1b686b7a` (HAR-EXP-02). Este paquete documental es HAR-ROADMAP-01B. `origin/main` = `d58c16e` (lab 3D, sin Harmonic). Comprobar `git rev-parse HEAD`.
+**Línea base de experimentos:** `e5506541a2c5e22a309617cadd0b10af1b686b7a` (HAR-EXP-02). Trabajo habitual en `develop`; `main` solo con revisión. Comprobar `git rev-parse HEAD` y la rama activa.
 
 ## Fuentes de verdad
 
@@ -42,11 +42,11 @@ Objetivos vigentes:
 | `validate` | Implementado; falla nivel atómico | No es pass científico |
 | `harmonic` | **Stub** | Solo `println!` |
 | `evolve` (CLI) | **Implementado** | HAR-EVO-02 cerrado. Wrapper `evo01`; motor A; H-03, no Smolin; `--output-dir` obligatorio |
-| HAR-EVO-01 | Experimental, **cerrado en Git local** | Optimizador A vs control; fitness = índice interno |
+| HAR-EVO-01 | Experimental, **cerrado** | Optimizador A vs control; fitness = índice interno |
 | Motor `AdvancedPhysicsEngine` | Implementado + tests de regresión | Running 1-loop con corte `denom>0.1`; no es QCD de laboratorio |
 | Iso-Alpha A/B/C (HAR-04C) | Tests de software | A/B: reescalado MKSA; C: α_s distinto, misma α |
 | HAR-VIS-01 | Experimental | 401 muestras, semilla `137137` |
-| HAR-EXP-01 / 02 | Experimental, **cerrados en Git local** | Discontinuidad de `running_alpha_s` y su propagación |
+| HAR-EXP-01 / 02 | Experimental, **cerrados** | Discontinuidad de `running_alpha_s` y su propagación |
 | Autómatas `stream` / `lattice` + frontend | Verificados ALE-01B / ALE-02A | Sin puente al `CosmicLaw` |
 | `backend/knowledge` | Implementado, runtime poco ejercido | Grafo SQLite; no cableado al visor |
 
@@ -68,13 +68,13 @@ Resultados de corridas: carpetas hermanas `Aletheia-Engine-har*-runs` **fuera de
 
 ---
 
-## 4. Hitos completados (commits locales)
+## 4. Hitos completados
 
 | Hito | Commit | Qué quedó hecho |
 |---|---|---|
 | Monorepo inicial | `09087d8` | Árbol |
 | «Calibration pass» | `53a24c8` | Mensaje histórico; **no** es validación PDG independiente |
-| Lab 3D | `61f6540`, `d58c16e` | Visor + FluidCore. **`origin/main` = `d58c16e`** |
+| Lab 3D | `61f6540`, `d58c16e` | Visor + FluidCore. Base remota previa a Harmonic |
 | HAR-02 RNG/CSV | `b718e80` | `--rng-seed`, tests deterministas |
 | HAR-03 Python | `e30b86d` | Loaders y figuras; venv fuera del repo |
 | HAR-04A visión | `a1473ab` | [HARMONIC_VISION.md](HARMONIC_VISION.md) |
@@ -86,7 +86,8 @@ Resultados de corridas: carpetas hermanas `Aletheia-Engine-har*-runs` **fuera de
 | HAR-ROADMAP-01/01B | `c199472` | Memoria persistente; cola reordenada |
 | HAR-EVO-01 | `f078d7e` | Runner experimental A vs control |
 | HAR-EVO-02A | `0b7e00a` | Contrato CLI (docs); sin `--seed`; `--generations` obligatorio |
-| HAR-EVO-02B/C | este commit | CLI `evolve` pública; QA debug/release y exportación |
+| HAR-EVO-02B/C | `a746045` | CLI `evolve` pública; QA debug/release y exportación |
+| HAR-GIT-01B | este commit | Flujo `main`/`develop`; rutas de corrida genéricas |
 
 HAR-01 (límites del motor) no tiene un SHA propio; está en [RESEARCH_LOG.md](RESEARCH_LOG.md) y [models.md](models.md). ALE-01/02 (3D) son anteriores a Harmonic.
 
@@ -146,7 +147,7 @@ Detalle: [HARMONIC_VISION.md](HARMONIC_VISION.md) §2A.
 | Fallback PDG | Enmascara masas teóricas si se activa; 0/401 en VIS-01 |
 | Fitness ≠ habitabilidad | Lectura antrópica indebida |
 | Publicación no atómica de 3 archivos `evolve` | Un corte a mitad de `--force` puede mezclar CSV nuevos y viejos; el staging protege el run incompleto |
-| `origin/main` atrasado | Push no autorizado; no forzar |
+| Force-push / historial publicado | Prohibido sobre `main`; promoción solo por revisión |
 | 16 warnings `rustc` históricos | No «arreglarlos» de paso en hitos de física |
 
 ---
@@ -160,13 +161,15 @@ Detalle: [HARMONIC_VISION.md](HARMONIC_VISION.md) §2A.
 ## 10. Política Git y revisión
 
 - Propietario: arquitecto y revisor. Cursor: ejecutor.
-- Commit y push **solo** con autorización explícita. Sin `--force` sobre `main`.
+- Commit y push **solo** con autorización explícita (D-02).
+- Ramas (D-21): **`main`** estable y pública; **`develop`** integración habitual; **`feature/har-*`** funcionalidad; **`experiment/har-*`** experimentos. Los hitos se integran en `develop` tras revisión; la promoción a `main` es deliberada.
+- Sin `--force` sobre `main`. Sin rebase destructivo de historial publicado.
 - Un hito, un commit cuando el alcance es homogéneo.
-- Resultados de corridas fuera del árbol.
+- Resultados de corridas: carpetas hermanas `../Aletheia-Engine-har*-runs` (fuera del árbol).
 - Conservar hashes VIS-01 (`engine_evaluations` `2D19E32D…`, histórico `FC966CE1…`) salvo hito que los reemplace a propósito.
 
 ### Continuidad (sesiones futuras)
 
-**Antes:** leer este archivo, [DECISIONS.md](DECISIONS.md) y el informe del hito activo; `git rev-parse HEAD`, rama, `git status`, remoto; no saltar al siguiente hito.
+**Antes:** leer este archivo, [DECISIONS.md](DECISIONS.md) y el informe del hito activo; `git rev-parse HEAD`, rama (`develop` salvo promoción), `git status`, remoto; no saltar al siguiente hito.
 
 **Después:** listar archivos, correr tests de referencia, anotar hallazgos, pedir revisión; no commit/push sin orden.

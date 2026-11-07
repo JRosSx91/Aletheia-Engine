@@ -277,7 +277,7 @@ Código: `sim_modes/evo01.rs`, `evo01_regression.rs`, `scripts/plot_evo01.py`, l
 
 Fondo: `create_reference_universe()`. Init: `e`, `g`, `alpha_s` uniformes como `map`; `alpha=si_alpha(e)`; `gamma=g/G_N`. Mutación log-normal σ=0.05 sobre los tres genes. Clamp `next_down(hi)`. Semillas SplitMix64 desde 137137, flujos 0/1/2. Z de mutación indexada `(generación destino, slot)` idéntica en ambos brazos.
 
-Corrida principal: N=100, T=30, k=2, E=0. Salida fuera de Git: `C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-evo01-runs\`.
+Corrida principal: N=100, T=30, k=2, E=0. Salida fuera de Git: carpeta hermana `../Aletheia-Engine-har-evo01-runs/`.
 
 ### 12.1 Resultados (índice interno)
 

@@ -8,7 +8,7 @@ Las cifras son **salidas del motor**. El 1-loop **no** es una predicción cuanti
 
 Universo de referencia; solo varía `alpha_s`. Malla 0.05–2.0, refinada en 0.12–0.16 y 0.1388–0.1398. **936** puntos. Runner de tests `write_reference_alpha_s_scan` (no CLI). Columnas extra leídas de `evaluate()` existente.
 
-CSV: `C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-exp02-runs\alpha_s_scan.csv`
+CSV: `../Aletheia-Engine-har-exp02-runs/alpha_s_scan.csv` (carpeta hermana, fuera de Git).
 
 ## 1. Tabla junto al umbral
 
@@ -29,7 +29,7 @@ Los porcentajes siguientes **no** son derivadas continuas dX/dα_s. Son el cambi
 
 ## 2. Gráfica
 
-`C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-exp02-runs\exp02_qcd_propagation.html`
+`../Aletheia-Engine-har-exp02-runs/exp02_qcd_propagation.html`
 
 Cuatro paneles Plotly (α_s(1 GeV), m_p, Δm, índices 0–1). Zoom por defecto α_s ∈ [0.10, 0.18]. Figuras HAR-VIS-01 intactas.
 

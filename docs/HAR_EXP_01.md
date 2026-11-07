@@ -25,8 +25,8 @@ Comando original: `map --universes 400 --rng-seed 137137` con `--observables-csv
 
 Copias fuera de Git:
 
-- original: `C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-exp01-runs\original_vis01_copy\`
-- reproducción: `C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-exp01-runs\reproduction\`
+- original: `../Aletheia-Engine-har-exp01-runs/original_vis01_copy/`
+- reproducción: `../Aletheia-Engine-har-exp01-runs/reproduction/`
 
 ## 2. Muestras representativas
 
@@ -80,7 +80,7 @@ Otras piezas por tramos en el mismo archivo (μ≤1.5Λ, n_f 1.3/4.2, `.max` de 
 
 Runner interno: `write_reference_alpha_s_scan` en tests de `harmonic_regression.rs`. No está en la CLI. Fija `create_reference_universe()` y varía solo `alpha_s` (malla 0.05–0.25, refinada 0.12–0.16, más 0.25–2.0).
 
-CSV: `C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-exp01-runs\alpha_s_scan.csv`
+CSV: `../Aletheia-Engine-har-exp01-runs/alpha_s_scan.csv`
 
 | α_s_ref | denom | fórmula 1-loop | α_s(1 GeV) | Δm teór. (kg) | PDG |
 |---:|---:|---|---:|---:|---:|
@@ -93,7 +93,7 @@ Las 22+379 muestras del map caen sobre esas dos curvas del barrido, no sobre una
 
 ## 5. Gráfica
 
-`C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-exp01-runs\exp01_alphas_bifurcation.html`
+`../Aletheia-Engine-har-exp01-runs/exp01_alphas_bifurcation.html`
 
 Script: `backend/simulation/scripts/plot_alphas_bifurcation.py` (no reescribe las siete figuras HAR-VIS-01). Zoom por defecto α_s ∈ [0.10, 0.18]. Etiquetas: ramas del `if`, no nombres físicos.
 

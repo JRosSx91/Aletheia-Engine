@@ -2,7 +2,7 @@
 
 Informe científico-computacional. HEAD de partida: `c498a4afffdc5acb1f55d2ca59cf67843d628d93`. Modelo **A** (Historical) en todo el censo y los barridos. D es solo contraste en 219/351 y en el funnel VIS-01. **No** es habitabilidad.
 
-Corridas fuera de Git: `C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-exp03-runs\`
+Corridas fuera de Git: carpeta hermana `../Aletheia-Engine-har-exp03-runs/`.
 
 ---
 

@@ -16,8 +16,9 @@ No instalar en el Python global.
 El entorno virtual de referencia está **fuera del repositorio**:
 
 ```powershell
-py -3.14 -m venv C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har03-venv
-C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har03-venv\Scripts\python.exe -m pip install -r backend\simulation\requirements-analysis.txt
+# Carpetas hermanas del clon (fuera de Git). Desde la raíz del repositorio:
+py -3.14 -m venv ..\Aletheia-Engine-har03-venv
+..\Aletheia-Engine-har03-venv\Scripts\python.exe -m pip install -r backend\simulation\requirements-analysis.txt
 ```
 
 ## CSV esperados
@@ -30,7 +31,8 @@ Escritos por `rust-universe` en el directorio de trabajo. HAR-02 (semilla `13713
 | `library` | `cosmic_library.csv` | Una fila por denominador N |
 | `alpha-fixed` | `alpha_fixed_analysis.csv` | `c_variant`/`hbar_variant`/`epsilon0_variant` no entran en el motor |
 | `geometric` | `geometric_analysis.csv` | Curvatura y ratios 5D no entran en el fitness |
-| `harmonic` / `evolve` | — | Stubs; no hay CSV |
+| `harmonic` | — | Stub; no hay CSV |
+| `evolve` | `evo01_*.csv` / `evo01_summary.json` vía `--output-dir` | HAR-EVO-02; no escribe en el CWD. Plotly: `plot_evo01.py` |
 | `map --observables-csv` | p. ej. `engine_evaluations.csv` | **No** sustituye al CSV histórico. Una fila por sorteo (`--universes N` → N+1 filas) |
 
 ### CSV experimental (`engine_evaluations.csv`)
@@ -52,8 +54,10 @@ Solo se escribe si `map` recibe `--observables-csv`. El flag no existe en `libra
 Ejemplo (HAR-VIS, semilla 137137):
 
 ```powershell
-$bin = "backend\simulation\target\release\rust-universe.exe"
-$out = "C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-vis01-runs"
+# cwd = raíz del clon. $labs = directorio padre (carpetas hermanas).
+$labs = (Resolve-Path ..).Path
+$bin = (Resolve-Path "backend\simulation\target\release\rust-universe.exe").Path
+$out = Join-Path $labs "Aletheia-Engine-har-vis01-runs"
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 Push-Location $out
 & $bin map --universes 400 --rng-seed 137137 --observables-csv engine_evaluations.csv
@@ -64,25 +68,29 @@ Las figuras Plotly **no validan** el modelo. El HTML usa Plotly desde CDN (`incl
 
 ## Comandos
 
-Desde `backend/simulation/scripts`, con el venv activado o invocando su `python.exe`:
+Desde la raíz del clon (`$labs` = directorio padre). Los scripts se invocan por ruta:
 
 ```powershell
-$py = "C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har03-venv\Scripts\python.exe"
-$in = "C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har02-runs"
-$out = "C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har03-figures"
+$labs = (Resolve-Path ..).Path
+$py = Join-Path $labs "Aletheia-Engine-har03-venv\Scripts\python.exe"
+$in = Join-Path $labs "Aletheia-Engine-har02-runs"
+$out = Join-Path $labs "Aletheia-Engine-har03-figures"
+$scripts = "backend\simulation\scripts"
 
-& $py plot_map.py --input "$in\landscape_data_enhanced.csv" --output-dir "$out\map" --rng-seed 137137
-& $py plot_library.py --input "$in\cosmic_library.csv" --output-dir "$out\library" --rng-seed 137137
-& $py plot_alpha_fixed.py --input "$in\alpha_fixed_analysis.csv" --output-dir "$out\alpha_fixed" --rng-seed 137137
-& $py plot_geometric.py --input "$in\geometric_analysis.csv" --output-dir "$out\geometric" --rng-seed 137137
-& $py find_adam.py --input "$in\landscape_data_enhanced.csv" --output-json "$out\adam_summary.json"
-$vis = "C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-vis01-runs"
-& $py plot_observables.py --input "$vis\engine_evaluations.csv" --output-dir "$vis\figures" --rng-seed 137137
-$exp = "C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-exp01-runs"
-& $py plot_alphas_bifurcation.py --evaluations "$exp\reproduction\engine_evaluations.csv" --scan "$exp\alpha_s_scan.csv" --output "$exp\exp01_alphas_bifurcation.html"
-$exp2 = "C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-exp02-runs"
-& $py plot_alphas_propagation.py --scan "$exp2\alpha_s_scan.csv" --output "$exp2\exp02_qcd_propagation.html"
+& $py "$scripts\plot_map.py" --input "$in\landscape_data_enhanced.csv" --output-dir "$out\map" --rng-seed 137137
+& $py "$scripts\plot_library.py" --input "$in\cosmic_library.csv" --output-dir "$out\library" --rng-seed 137137
+& $py "$scripts\plot_alpha_fixed.py" --input "$in\alpha_fixed_analysis.csv" --output-dir "$out\alpha_fixed" --rng-seed 137137
+& $py "$scripts\plot_geometric.py" --input "$in\geometric_analysis.csv" --output-dir "$out\geometric" --rng-seed 137137
+& $py "$scripts\find_adam.py" --input "$in\landscape_data_enhanced.csv" --output-json "$out\adam_summary.json"
+$vis = Join-Path $labs "Aletheia-Engine-har-vis01-runs"
+& $py "$scripts\plot_observables.py" --input "$vis\engine_evaluations.csv" --output-dir "$vis\figures" --rng-seed 137137
+$exp = Join-Path $labs "Aletheia-Engine-har-exp01-runs"
+& $py "$scripts\plot_alphas_bifurcation.py" --evaluations "$exp\reproduction\engine_evaluations.csv" --scan "$exp\alpha_s_scan.csv" --output "$exp\exp01_alphas_bifurcation.html"
+$exp2 = Join-Path $labs "Aletheia-Engine-har-exp02-runs"
+& $py "$scripts\plot_alphas_propagation.py" --scan "$exp2\alpha_s_scan.csv" --output "$exp2\exp02_qcd_propagation.html"
+Push-Location $scripts
 & $py -m unittest test_harmonic_csv.py
+Pop-Location
 ```
 
 `plot_landscape.py` y `plot_interactive.py` delegan en `plot_map.py`. `analyze_harmonics.py` y `plot_evolution.py` salen con código 2 (stubs).
