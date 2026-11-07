@@ -313,3 +313,46 @@ Figuras: `evo01_fitness_sel_vs_ctrl.html`, `evo01_genes.html`, `evo01_levels.htm
 El JSON no lleva rutas ni marcas de tiempo. `fitness=1` es saturación de `min(1)` en la heurística, no habitabilidad. Una sola semilla **no** es evidencia estadística general.
 
 Corrida N=200, T=100 no ejecutada (opcional). HAR-EVO-01 **cerrado** como optimizador experimental. CLI `evolve` **no** cerrado.
+
+---
+
+## 13. Interfaz pública (HAR-EVO-02A, diseño)
+
+**Estado:** diseño **cerrado** (contrato aprobado). Sin código en este cierre. El subcomando `evolve` sigue siendo un `println!`. HAR-EVO-02B, si se autoriza, **reutiliza** `evo01.rs`; no reimplementa el GA. No es Smolin.
+
+### 13.1 Auditoría
+
+Hoy: `--seed` (archivo de genoma) obligatorio; `--generations` default 500; el stub ignora ambos. `--rng-seed` no existe en `evolve`. El runner es `#[cfg(test)]`. `map` escribe en el CWD. Esa CLI **nunca funcionó**; no se finge compatibilidad.
+
+Ruta mínima: publicar `mod evo01`; `evolve.rs` = validar + `write_evo01_run` vía directorio de staging; clap **sin** `--universes` y **sin** `--seed`.
+
+### 13.2 Contrato aprobado
+
+```text
+rust-universe evolve --population 100 --generations 30 --mutation-sigma 0.05 --rng-seed 137137 --output-dir <dir>
+```
+
+`--generations 30` = T=30 **transiciones** ⇒ generaciones **0..=30** (31 poblaciones). Evaluaciones/brazo = N×31.
+
+| Flag | Default | Semántica |
+|---|---|---|
+| `--population` / `-p` | 100 | N por brazo. No es `--universes` |
+| `--generations` / `-g` | **obligatorio** (sin default) | T transiciones, 0..=100. El 500 del stub se retira |
+| `--mutation-sigma` | 0.05 | σ log-normal |
+| `--rng-seed` | **obligatorio** | u64, `EvoConfig.base_seed`. No hay `thread_rng` |
+| `--output-dir` | **obligatorio** | directorio de los tres archivos; no se asume CWD ni una ruta de lab |
+| `--force` | false | única vía para reemplazar los tres nombres previstos |
+
+**`--seed` se retira.** La carga de un genoma JSON **no existe**. Clap debe rechazar `--seed` en el parseo (argumento desconocido). Texto de ayuda (`after_help`): usar `--rng-seed`; no hay archivo de genoma. No se acepta `--seed` para fallar después en runtime.
+
+Fijos: motor A; genes α, α_s, γ; k=2; E=0; dos brazos; nombres `evo01_individuals.csv`, `evo01_metrics.csv`, `evo01_summary.json`. Plotly: `plot_evo01.py`, no el binario.
+
+Límites (antes del GA): N ∈ [2, 200]; T ∈ [0, 100]; σ ∈ (0, 0.2]; **2×N×(T+1) ≤ 50 000**. `--output-dir` no es un archivo. Si alguno de los tres CSV/JSON existe y no hay `--force`, abortar **sin** ejecutar. Escritura: staging en un subdirectorio temporal del destino, publicar solo si el runner termina; no borrar archivos ajenos. Si la publicación de tres `rename` no es atómica en Windows, el staging evita truncar el resultado previo antes de un run válido.
+
+### 13.3 Tests previstos (02B)
+
+Parseo del ejemplo; rechazo de `evolve` sin `--generations` / `--rng-seed` / `--output-dir`; rechazo de `--seed`; límites N/T/σ y presupuesto; ruta archivo vs directorio; overwrite sin/con `--force`; CLI vs runner (bytes + SHA-256 01C); `map` intacto; `harmonic` sigue stub; `evolve` ya no es stub; `new()` Historical.
+
+### 13.4 Riesgos
+
+Mezclar `--seed` histórico con RNG; promover `evo01` al binario (warnings `dead_code` si no se `cfg(test)` lo exclusivo de tests); `--output-dir .` dentro del repo; no atómico al reemplazar tres archivos; leer la CLI como selección cósmica.

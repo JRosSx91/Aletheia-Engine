@@ -29,7 +29,7 @@ Objetivos vigentes:
 1. Hacer **explícito y reproducible** lo que el motor calcula (α SI, running de α_s, masas teóricas vs PDG, heurística).
 2. Separar **observables del modelo** de **índices de ranking**.
 3. Conservar líneas base históricas (CSV, hashes, tests) antes de cambiar ecuaciones.
-4. Avanzar hacia un `evolve` **estratégico**: primero un optimizador experimental (H-03); Smolin (H-04) aparte. Hoy el CLI es stub.
+4. Avanzar hacia un `evolve` **estratégico**: el optimizador experimental (H-03) está en el runner HAR-EVO-01; la CLI pública sigue stub hasta HAR-EVO-02. Smolin (H-04) aparte.
 5. No presentar 137, fitness alto o una gráfica Plotly como física demostrada.
 
 ---
@@ -91,7 +91,7 @@ HAR-01 (límites del motor) no tiene un SHA propio; está en [RESEARCH_LOG.md](R
 
 ## 5. En curso
 
-Nada en curso. Siguiente: **HAR-PHYS-01** (opcional; no bloquea). El CLI `evolve` sigue stub. A sigue siendo el default.
+**HAR-EVO-02A** — diseño de CLI **cerrado** ([HAR_EVO_01.md](HAR_EVO_01.md) §13). Código = 02B (autorización aparte). El subcomando sigue stub. HAR-PHYS-01 **pendiente**.
 
 ---
 
@@ -102,9 +102,10 @@ Orden **orientativo**; se puede revisar tras cada experimento. Criterios = softw
 1. **HAR-VISION-02** — Documentar P1–P4. *Hecho (documental); no implementado en código.*
 2. **HAR-MODEL-01** — Inventario del modelo QCD y comparación pareada A/B/D. *Hecho* ([HAR_MODEL_01.md](HAR_MODEL_01.md)). A es el default; B/D experimentales; B no validada como QCD. PHYS-01 sigue aparte.
 3. **HAR-EXP-03** — Gates estelares y niveles. *Hecho* ([HAR_EXP_03.md](HAR_EXP_03.md)). VIS-01 A: niveles 94/299/8; 8 con stellar>0.4; 0 pesados/BH. A no se sustituyó.
-4. **HAR-EVO-01** — Primer **optimizador experimental** de poblaciones de `CosmicLaw` (H-03). *Hecho* ([HAR_EVO_01.md](HAR_EVO_01.md)). CLI `evolve` **sigue stub**. Fitness = índice interno; no es Smolin.
-5. **HAR-PHYS-01** — Decisión explícita sobre aproximaciones físicas (p. ej. `running_alpha_s` / umbral 0.1). Opcional. No es requisito absoluto para seguir experimentando. Criterio: conservar línea base EXP-01/02 o versionar un motor nuevo sin reescribir hashes VIS-01 en silencio.
-6. **HAR-PRIME-01** — Primos vs compuestos cuando el modelo retenga α = 1/N de forma coherente. Hoy `library` no lo hace.
+4. **HAR-EVO-01** — Primer **optimizador experimental** de poblaciones de `CosmicLaw` (H-03). *Hecho* ([HAR_EVO_01.md](HAR_EVO_01.md)). CLI `evolve` **sigue stub**.
+4b. **HAR-EVO-02** — Cablear el runner a la CLI. **02A cerrado** (contrato: `--generations` y `--rng-seed` obligatorios; sin `--seed` de archivo). 02B no implementar hasta autorización. No es Smolin.
+5. **HAR-PHYS-01** — Decisión explícita sobre aproximaciones físicas (p. ej. `running_alpha_s` / umbral 0.1). Opcional. **Pendiente**; no se adelanta en EVO-02A.
+6. **HAR-PRIME-01** — Primos vs compuestos cuando el modelo retenga α = 1/N de forma coherente. Hoy `library` no lo hace. **No se adelanta.**
 
 ### Fuera de alcance próximo
 
@@ -149,7 +150,7 @@ Detalle: [HARMONIC_VISION.md](HARMONIC_VISION.md) §2A.
 
 ## 9. Próximo hito recomendado
 
-**HAR-PHYS-01** — decisión sobre aproximaciones del running (opcional). No PRIME-01 ni Smolin ni cablear `evolve` aquí.
+**HAR-EVO-02B** — implementar el contrato de [HAR_EVO_01.md](HAR_EVO_01.md) §13 **solo si se autoriza**. Hasta entonces `evolve` es stub. HAR-PHYS-01, PRIME-01 y Smolin **no** se adelantan.
 
 ---
 
