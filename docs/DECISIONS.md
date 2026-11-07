@@ -28,6 +28,7 @@ Protocolo de sesión: [ROADMAP.md](ROADMAP.md) §10.
 | D-13 | Distinguir tests de software y validación científica en cada informe. |
 | D-14 | El running 1-loop **no** es predicción cuantitativa en acoplamiento fuerte. El umbral `denom>0.1` es recorte de implementación. |
 | D-18 | Tras HAR-MODEL-01: **A (Historical) es el único default** de `new()` y de la CLI. B (smooth ε) y D (α_s_had=α_s_ref) son variantes internas de comparación. B **no** está validada como QCD de laboratorio. |
+| D-19 | HAR-EVO-01 (diseño): genoma `alpha_s`, `alpha`, `gamma=G/G_N`; motor A; sin cruce; torneo k=2; E=0 en la comparación principal; σ=0.05; caja e init como `map` (`e` y `g` uniformes); gen 0 compartido; mutación indexada `(generación, slot)`; CLI pública intacta. No es Smolin. |
 
 ---
 
@@ -40,6 +41,7 @@ Protocolo de sesión: [ROADMAP.md](ROADMAP.md) §10.
 | P-03 | HAR-PHYS-01 / parchear `running_alpha_s` | En cola (5); no es puerta de EXP-03 |
 | P-04 | HAR-VISION-02 | Documentado (preguntas P1–P4); no implementado en código |
 | P-05 | Push a `origin` | Prohibido de momento; `origin/main` ≠ `main` local |
+| P-06 | HAR-EVO-01 parametrización | **Aprobado en diseño** (D-19). Código = hito 01B aparte |
 
 ---
 
