@@ -10,6 +10,10 @@ pub mod stream;
 pub mod validate;
 
 #[cfg(test)]
+mod exp03_gates;
+#[cfg(test)]
+mod exp03_regression;
+#[cfg(test)]
 mod harmonic_regression;
 #[cfg(test)]
 mod running_compare;

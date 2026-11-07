@@ -351,7 +351,7 @@ Esta lista es el plan **en el momento de HAR-04A** (`a1473ab`). No es el backlog
 4. **HAR-EVO-02 — Convergencia y azar.** *Pendiente.*
 5. **HAR-PRIME-01 — Primalidad.** *Pendiente*; no bloquea toda experimentación (HAR-PHYS-01 no es requisito absoluto).
 
-Cola vigente y política Git: [ROADMAP.md](ROADMAP.md). P1–P4 están **documentadas** en la §2A, no implementadas. Siguiente hito técnico: HAR-EXP-03. Fuera de esa cola: no acoplar autómatas 3D al escáner; no modelar biología ni cognición; no reescribir la landing como si las hipótesis estuvieran demostradas.
+Cola vigente y política Git: [ROADMAP.md](ROADMAP.md). P1–P4 están **documentadas** en la §2A, no implementadas. Siguiente hito técnico: HAR-EVO-01 (diseño; no código hasta autorización). Fuera de esa cola: no acoplar autómatas 3D al escáner; no modelar biología ni cognición; no reescribir la landing como si las hipótesis estuvieran demostradas.
 
 ---
 

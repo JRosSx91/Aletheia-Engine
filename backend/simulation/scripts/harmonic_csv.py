@@ -350,9 +350,69 @@ def load_evaluations(path: Path | str, *, allow_empty: bool = True) -> pd.DataFr
     return load_csv(path, SCHEMA_EVALUATION, allow_empty=allow_empty)
 
 
+EXP03_GATE_COLUMNS = [
+    "sample_id",
+    "rng_seed",
+    "variant",
+    "jeans_diagnostic_kg",
+    "stellar_lifetime_s",
+    "stellar_lifetime_years",
+    "lifetime_branch",
+    "scan_axis",
+    "g_si",
+    "e_si",
+    "alpha_si",
+    "inverse_alpha_si",
+    "alpha_s_reference",
+    "alpha_s_mu_ref_gev",
+    "theoretical_proton_mass_kg",
+    "theoretical_neutron_mass_kg",
+    "theoretical_np_mass_diff_kg",
+    "theoretical_pion_mass_kg",
+    "validated_proton_mass_kg",
+    "validated_neutron_mass_kg",
+    "validated_pion_mass_kg",
+    "used_pdg_hadron_fallback",
+    "hubble_time_s",
+    "jeans_mass_kg",
+    "coulomb_barrier_j",
+    "chandrasekhar_mass_kg",
+    "nucleon_stability_gate_passed",
+    "cosmology_term",
+    "nucleosynthesis_term",
+    "stellar_term",
+    "heavy_element_term",
+    "black_hole_term",
+    "level_bonus_applied",
+    "complexity_level",
+    "fitness_uncapped",
+    "fitness",
+]
+EXP03_GATE_NUMERIC = [
+    c
+    for c in EXP03_GATE_COLUMNS
+    if c not in ("variant", "lifetime_branch", "scan_axis")
+]
+SCHEMA_EXP03_GATE = Schema(
+    name="exp03-gates",
+    columns=tuple(EXP03_GATE_COLUMNS),
+    numeric=tuple(EXP03_GATE_NUMERIC),
+    notes=(
+        "HAR-EXP-03 diagnostic export. jeans_diagnostic_kg and stellar_lifetime_* "
+        "are always computed; jeans_mass_kg empty means the stellar stage was not entered. "
+        "Not a VIS-01 historical file."
+    ),
+)
+
+
 def load_running_compare(path: Path | str, *, allow_empty: bool = True) -> pd.DataFrame:
     """Load a HAR-MODEL-01B variant CSV. Empty epsilon / stage cells stay NaN."""
     return load_csv(path, SCHEMA_RUNNING_COMPARE, allow_empty=allow_empty)
+
+
+def load_exp03_gates(path: Path | str, *, allow_empty: bool = True) -> pd.DataFrame:
+    """Load HAR-EXP-03 gate census or 1-parameter scan CSV."""
+    return load_csv(path, SCHEMA_EXP03_GATE, allow_empty=allow_empty)
 
 
 def reject_stub_csv(kind: str) -> None:

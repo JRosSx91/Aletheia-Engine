@@ -119,13 +119,24 @@ Estados de revisión: **cerrado** (commit local), **histórico** (pre-Harmonic o
 
 ---
 
+## HAR-EXP-03 — Gates estelares
+
+- **Pregunta.** Qué abre `stellar>0.4` y las etapas pesada/BH en el motor A.
+- **Método.** Censo VIS-01 401 ids; contraste D en 219/351; barridos 1-parámetro (G SI, e, α_s) sobre las leyes 189 y 219.
+- **Datos.** `Aletheia-Engine-har-exp03-runs\` (fuera de Git).
+- **Resultado.** A: niveles **94 / 299 / 8**. Ocho passers estelares (G ≳ 6×10⁻¹⁰ SI). Ninguno pasa pesados ni evalúa BH. 219/351: A nivel 1 con `stellar_term=0.0` (τ&lt;1 Myr); D nivel 5. Barrido de 219: α_s_ref ∈ [0.103, 0.115] da nivel 5 **bajo A** (no es un hecho de la población original).
+- **Limitaciones.** No habitabilidad. G en SI no es invariante. Fitness favorece techos de muestreo.
+- **Informe.** [HAR_EXP_03.md](HAR_EXP_03.md).
+- **Revisión.** Cerrado en HAR-EXP-03B.
+
+---
+
 ## Propuestos (no ejecutados)
 
 Orden: [ROADMAP.md](ROADMAP.md) §6.
 
 | Id | Pregunta breve |
 |---|---|
-| HAR-EXP-03 | ¿Un universo con `stellar>0.4` muestra más gates o el gaussiano pesado? |
 | HAR-EVO-01 | Primer optimizador experimental (no Smolin) |
 | HAR-PHYS-01 | ¿Se acota o cambia `running_alpha_s`? Opcional; no bloquea lo anterior |
 | HAR-PRIME-01 | Primos vs compuestos cuando α = 1/N sea coherente |

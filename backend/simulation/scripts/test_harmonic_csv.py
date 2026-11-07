@@ -13,9 +13,11 @@ from find_adam import find_adam
 from harmonic_csv import (
     CsvSchemaError,
     EVALUATION_COLUMNS,
+    EXP03_GATE_COLUMNS,
     RUNNING_COMPARE_COLUMNS,
     load_alpha_fixed,
     load_evaluations,
+    load_exp03_gates,
     load_geometric,
     load_library,
     load_map,
@@ -25,6 +27,7 @@ from harmonic_csv import (
 from plot_alphas_bifurcation import SCAN_COLUMNS, plot_alphas_bifurcation
 from plot_alphas_propagation import PROPAGATION_COLUMNS, plot_alphas_propagation
 from plot_running_compare import plot_running_compare
+from plot_exp03_gates import plot_exp03_gates
 from plot_observables import plot_observables
 from plot_alpha_fixed import plot_alpha_fixed
 from plot_geometric import plot_geometric
@@ -349,6 +352,52 @@ class RunningComparePlotTests(unittest.TestCase):
             self.assertIn("sample_id", text)
             self.assertNotIn("QCD de laboratorio", text)
             self.assertTrue((out / "paired_summary.json").is_file())
+
+
+E3_HEADER = ",".join(EXP03_GATE_COLUMNS)
+
+
+def _e3_row(eval_row: str, sample: str, variant: str, level: str, stellar: str, heavy: str, jeans: str) -> str:
+    parts = eval_row.split(",")
+    parts[0] = sample
+    extras = [variant, jeans, "1.0000000000000000e+15", "3.1688087814028950e+07", "in_window", "vis01"]
+    body = parts[2:]
+    # complexity_level is index -2 of evaluation body (last two are fitness_uncapped, fitness)
+    # evaluation: after seed, 28 fields; complexity_level is field 26 of full eval = body[24]
+    return ",".join([parts[0], parts[1]] + extras + body)
+
+
+class Exp03PlotTests(unittest.TestCase):
+    def test_loader_keeps_none_heavy(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            row = _e3_row(EVAL_NONE_ROW, "219", "A", "1", "0", "", "8e31")
+            path = _write(tmp, "a.csv", E3_HEADER + "\n" + row + "\n")
+            frame = load_exp03_gates(path)
+            self.assertEqual(frame.loc[0, "variant"], "A")
+            self.assertTrue(pd.isna(frame.loc[0, "heavy_element_term"]))
+            self.assertEqual(frame.loc[0, "lifetime_branch"], "in_window")
+
+    def test_five_html_not_habitability(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+
+            def two(name: str, variant: str, st: str, hv: str, lv_a: str, lv_b: str) -> Path:
+                r0 = _e3_row(EVAL_ROW, "219", variant, lv_a, st, hv, "7e31")
+                r1 = _e3_row(EVAL_ROW, "351", variant, lv_b, st, hv, "7e31")
+                return _write(tmp, name, E3_HEADER + "\n" + r0 + "\n" + r1 + "\n")
+
+            a = two("vis01_gates_A.csv", "A", "0.0", "", "1", "1")
+            d = two("vis01_gates_D.csv", "D", "1.0", "1.0", "5", "5")
+            scan = two("scan.csv", "A", "1.0", "0.0", "2", "2")
+            out = tmp / "figs"
+            paths = plot_exp03_gates(a, d, scan, scan, scan, scan, scan, out)
+            self.assertGreaterEqual(len(paths), 5)
+            text = paths["levels"].read_text(encoding="utf-8")
+            self.assertIn("HAR-EXP-03", text)
+            ad = paths["ad"].read_text(encoding="utf-8")
+            self.assertTrue("219" in ad)
+            self.assertNotIn("habitabilidad física demostrada", text)
 
 
 if __name__ == "__main__":

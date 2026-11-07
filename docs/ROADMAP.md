@@ -89,7 +89,7 @@ HAR-01 (límites del motor) no tiene un SHA propio; está en [RESEARCH_LOG.md](R
 
 ## 5. En curso
 
-Nada en curso. Siguiente: **HAR-EXP-03**.
+Nada en curso. Siguiente: **HAR-EVO-01** (diseño; no implementar hasta autorización). A sigue siendo el default.
 
 ---
 
@@ -99,7 +99,7 @@ Orden **orientativo**; se puede revisar tras cada experimento. Criterios = softw
 
 1. **HAR-VISION-02** — Documentar P1–P4. *Hecho (documental); no implementado en código.*
 2. **HAR-MODEL-01** — Inventario del modelo QCD y comparación pareada A/B/D. *Hecho* ([HAR_MODEL_01.md](HAR_MODEL_01.md)). A es el default; B/D experimentales; B no validada como QCD. PHYS-01 sigue aparte.
-3. **HAR-EXP-03** — Barrido α_s con un `CosmicLaw` que pase `stellar_score > 0.4`, sin nuevas ecuaciones. Criterio: informe de gates Jeans/Chandrasekhar/pesados.
+3. **HAR-EXP-03** — Gates estelares y niveles. *Hecho* ([HAR_EXP_03.md](HAR_EXP_03.md)). VIS-01 A: niveles 94/299/8; 8 con stellar>0.4; 0 pesados/BH. A no se sustituyó.
 4. **HAR-EVO-01** — Primer **optimizador experimental** de poblaciones de `CosmicLaw` (H-03): genoma, mutación, selección, control sin selección. **No** afirma selección cosmológica. H-04 (Smolin) queda separado y no se implementa aquí. Criterio: diseño escrito; stub sustituido solo si el hito lo pide; fitness sigue siendo índice interno.
 5. **HAR-PHYS-01** — Decisión explícita sobre aproximaciones físicas (p. ej. `running_alpha_s` / umbral 0.1). Opcional. No es requisito absoluto para seguir experimentando. Criterio: conservar línea base EXP-01/02 o versionar un motor nuevo sin reescribir hashes VIS-01 en silencio.
 6. **HAR-PRIME-01** — Primos vs compuestos cuando el modelo retenga α = 1/N de forma coherente. Hoy `library` no lo hace.
@@ -147,7 +147,7 @@ Detalle: [HARMONIC_VISION.md](HARMONIC_VISION.md) §2A.
 
 ## 9. Próximo hito recomendado
 
-**HAR-EXP-03** — barrido α_s con un `CosmicLaw` que pase `stellar_score > 0.4`, sin nuevas ecuaciones. No `evolve` / PHYS-01 salvo autorización.
+**HAR-EVO-01** — primer optimizador experimental de poblaciones `CosmicLaw` (H-03). Diseño antes que código; fitness = índice interno; control sin selección. **No** implementar hasta autorización. No PHYS-01 / PRIME-01 / Smolin aquí.
 
 ---
 
