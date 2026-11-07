@@ -30,11 +30,23 @@ enum Commands {
         #[arg(long)]
         observables_csv: Option<PathBuf>,
     },
+    /// Experimental H-03 optimizer (internal fitness). Not cosmological selection.
+    #[command(after_help = "T = --generations is the number of transitions: T=30 yields generations 0..=30.\nThere is no --seed genome file; use --rng-seed. CSV/JSON via --output-dir; Plotly remains plot_evo01.py.")]
     Evolve {
-        #[arg(short, long)]
-        seed: String,
-        #[arg(short, long, default_value_t = 500)]
+        /// Individuals per arm. Not `map --universes`.
+        #[arg(short = 'p', long, default_value_t = 100)]
+        population: u32,
+        /// Transition count T (required). Live generations = T+1.
+        #[arg(short, long, required = true)]
         generations: u32,
+        #[arg(long, default_value_t = 0.05)]
+        mutation_sigma: f64,
+        #[arg(long, required = true)]
+        rng_seed: u64,
+        #[arg(long, required = true)]
+        output_dir: PathBuf,
+        #[arg(long, default_value_t = false)]
+        force: bool,
     },
     Harmonic {
         #[arg(short, long, default_value_t = 10000)]
@@ -85,8 +97,22 @@ fn main() -> Result<(), Box<dyn Error>> {
             *rng_seed,
             observables_csv.as_deref(),
         )?,
-        Commands::Evolve { seed, generations } => {
-            sim_modes::evolve::run_evolutionary_mode(seed, *generations)?
+        Commands::Evolve {
+            population,
+            generations,
+            mutation_sigma,
+            rng_seed,
+            output_dir,
+            force,
+        } => {
+            sim_modes::evolve::run_evolutionary_mode(&sim_modes::evolve::EvolveRequest {
+                population: *population,
+                generations: *generations,
+                mutation_sigma: *mutation_sigma,
+                rng_seed: *rng_seed,
+                output_dir: output_dir.clone(),
+                force: *force,
+            })?;
         }
         Commands::Harmonic { samples } => sim_modes::harmonic::run_harmonic_mode(*samples)?,
         Commands::Library {
@@ -152,12 +178,31 @@ mod cli_parse_tests {
             _ => panic!("expected geometric"),
         }
 
-        let evolve =
-            Cli::try_parse_from(["rust-universe", "evolve", "--seed", "genome.json"]).unwrap();
+        let evolve = Cli::try_parse_from([
+            "rust-universe",
+            "evolve",
+            "--generations",
+            "30",
+            "--rng-seed",
+            "137137",
+            "--output-dir",
+            "out",
+        ])
+        .unwrap();
         match evolve.command {
-            Commands::Evolve { seed, generations } => {
-                assert_eq!(seed, "genome.json");
-                assert_eq!(generations, 500);
+            Commands::Evolve {
+                population,
+                generations,
+                mutation_sigma,
+                rng_seed,
+                force,
+                ..
+            } => {
+                assert_eq!(population, 100);
+                assert_eq!(generations, 30);
+                assert_eq!(mutation_sigma.to_bits(), 0.05f64.to_bits());
+                assert_eq!(rng_seed, 137137);
+                assert!(!force);
             }
             _ => panic!("expected evolve"),
         }
@@ -169,6 +214,59 @@ mod cli_parse_tests {
         assert!(Cli::try_parse_from(["rust-universe", "alpha-fixed", "--samples", "-4"]).is_err());
         assert!(Cli::try_parse_from(["rust-universe", "map", "--rng-seed", "1.5"]).is_err());
         assert!(Cli::try_parse_from(["rust-universe", "evolve"]).is_err());
+        assert!(Cli::try_parse_from([
+            "rust-universe",
+            "evolve",
+            "--rng-seed",
+            "1",
+            "--output-dir",
+            "o"
+        ])
+        .is_err());
+        assert!(Cli::try_parse_from([
+            "rust-universe",
+            "evolve",
+            "--generations",
+            "30",
+            "--output-dir",
+            "o"
+        ])
+        .is_err());
+        assert!(Cli::try_parse_from([
+            "rust-universe",
+            "evolve",
+            "--generations",
+            "30",
+            "--rng-seed",
+            "1"
+        ])
+        .is_err());
+        assert!(Cli::try_parse_from([
+            "rust-universe",
+            "evolve",
+            "--seed",
+            "genome.json",
+            "--generations",
+            "30",
+            "--rng-seed",
+            "1",
+            "--output-dir",
+            "o"
+        ])
+        .is_err());
+        assert!(Cli::try_parse_from([
+            "rust-universe",
+            "evolve",
+            "--universes",
+            "10",
+            "--generations",
+            "30",
+            "--rng-seed",
+            "1",
+            "--output-dir",
+            "o"
+        ])
+        .is_err());
     }
 
     #[test]

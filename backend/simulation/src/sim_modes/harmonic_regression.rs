@@ -6,7 +6,6 @@
 use super::alpha_fixed::{
     run_alpha_fixed_mode_to_path, sample_alpha_fixed_universe, ALPHA_FIXED_CSV_HEADERS,
 };
-use super::evolve::run_evolutionary_mode;
 use super::geometric::{
     run_geometric_mode_to_path, sample_geometric_universe, GEOMETRIC_CSV_HEADERS,
 };
@@ -469,10 +468,8 @@ fn validate_mode_still_fails_atomic_level() {
 }
 
 #[test]
-fn harmonic_and_evolve_remain_stubs() {
+fn harmonic_remains_stub() {
     run_harmonic_mode(10).unwrap();
-    run_evolutionary_mode("genome.json", 10).unwrap();
-    run_evolutionary_mode("missing-file-does-not-matter.json", 0).unwrap();
 }
 
 #[test]

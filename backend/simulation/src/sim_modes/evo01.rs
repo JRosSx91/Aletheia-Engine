@@ -1,4 +1,4 @@
-//! HAR-EVO-01 experimental optimizer. Test/experiment helper, not public CLI.
+//! HAR-EVO-01 experimental optimizer. Called from the `evolve` CLI wrapper.
 //! Fitness is an internal index, not habitability. Motor A only.
 
 use crate::core::models::CosmicLaw;
@@ -15,12 +15,18 @@ use std::error::Error;
 use std::f64::consts::PI;
 use std::path::Path;
 
-pub(crate) const EVO01_BASE_SEED: u64 = 137_137;
-pub(crate) const EVO01_SIGMA: f64 = 0.05;
 pub(crate) const EVO01_TOURNAMENT_K: usize = 2;
+#[cfg(test)]
+pub(crate) const EVO01_BASE_SEED: u64 = 137_137;
+#[cfg(test)]
+pub(crate) const EVO01_SIGMA: f64 = 0.05;
+#[cfg(test)]
 pub(crate) const EVO01_PRIMARY_N: u32 = 100;
+#[cfg(test)]
 pub(crate) const EVO01_PRIMARY_T: u32 = 30;
+#[cfg(test)]
 pub(crate) const EVO01_SMOKE_N: u32 = 8;
+#[cfg(test)]
 pub(crate) const EVO01_SMOKE_T: u32 = 5;
 
 pub(crate) const MAP_G_LO: f64 = 6.674e-11;
@@ -160,6 +166,7 @@ pub(crate) struct EvoConfig {
 }
 
 impl EvoConfig {
+    #[cfg(test)]
     pub(crate) fn smoke() -> Self {
         Self {
             n: EVO01_SMOKE_N,
@@ -168,6 +175,7 @@ impl EvoConfig {
             base_seed: EVO01_BASE_SEED,
         }
     }
+    #[cfg(test)]
     pub(crate) fn primary() -> Self {
         Self {
             n: EVO01_PRIMARY_N,
@@ -187,7 +195,7 @@ impl EvoConfig {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub(crate) struct EvoSummary {
     pub run_id: String,
     pub n: u32,
@@ -820,6 +828,7 @@ pub(crate) fn write_evo01_run(dir: &Path, cfg: EvoConfig) -> Result<EvoSummary, 
     Ok(summary)
 }
 
+#[cfg(test)]
 pub(crate) fn run_both_pops(
     cfg: EvoConfig,
 ) -> (Vec<Vec<Individual>>, Vec<Vec<Individual>>) {

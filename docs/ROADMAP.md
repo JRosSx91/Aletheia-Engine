@@ -29,7 +29,7 @@ Objetivos vigentes:
 1. Hacer **explícito y reproducible** lo que el motor calcula (α SI, running de α_s, masas teóricas vs PDG, heurística).
 2. Separar **observables del modelo** de **índices de ranking**.
 3. Conservar líneas base históricas (CSV, hashes, tests) antes de cambiar ecuaciones.
-4. Avanzar hacia un `evolve` **estratégico**: el optimizador experimental (H-03) está en el runner HAR-EVO-01; la CLI pública sigue stub hasta HAR-EVO-02. Smolin (H-04) aparte.
+4. Avanzar hacia un `evolve` **estratégico**: el optimizador experimental (H-03) está en el runner HAR-EVO-01 y en la CLI. Smolin (H-04) aparte.
 5. No presentar 137, fitness alto o una gráfica Plotly como física demostrada.
 
 ---
@@ -41,7 +41,7 @@ Objetivos vigentes:
 | CLI `map` / `library` / `alpha-fixed` / `geometric` | Implementado + tests de esquema/RNG | `--rng-seed`; `map --observables-csv` |
 | `validate` | Implementado; falla nivel atómico | No es pass científico |
 | `harmonic` | **Stub** | Solo `println!` |
-| `evolve` (CLI) | **Stub** | `println!`. El runner experimental HAR-EVO-01 **no** está cableado al subcomando |
+| `evolve` (CLI) | **Implementado** | HAR-EVO-02 cerrado. Wrapper `evo01`; motor A; H-03, no Smolin; `--output-dir` obligatorio |
 | HAR-EVO-01 | Experimental, **cerrado en Git local** | Optimizador A vs control; fitness = índice interno |
 | Motor `AdvancedPhysicsEngine` | Implementado + tests de regresión | Running 1-loop con corte `denom>0.1`; no es QCD de laboratorio |
 | Iso-Alpha A/B/C (HAR-04C) | Tests de software | A/B: reescalado MKSA; C: α_s distinto, misma α |
@@ -83,7 +83,10 @@ Resultados de corridas: carpetas hermanas `Aletheia-Engine-har*-runs` **fuera de
 | HAR-VIS-01 | `e0102e3` | CSV de 30 columnas + Plotly |
 | HAR-EXP-01 | `3fba121` | Corte `denominator > 0.1`, α_s ≈ 0.1392266 |
 | HAR-EXP-02 | `e550654` | Propagación a masas, BBN y fitness |
-| HAR-ROADMAP-01/01B | este commit documental | Memoria persistente; cola reordenada |
+| HAR-ROADMAP-01/01B | `c199472` | Memoria persistente; cola reordenada |
+| HAR-EVO-01 | `f078d7e` | Runner experimental A vs control |
+| HAR-EVO-02A | `0b7e00a` | Contrato CLI (docs); sin `--seed`; `--generations` obligatorio |
+| HAR-EVO-02B/C | este commit | CLI `evolve` pública; QA debug/release y exportación |
 
 HAR-01 (límites del motor) no tiene un SHA propio; está en [RESEARCH_LOG.md](RESEARCH_LOG.md) y [models.md](models.md). ALE-01/02 (3D) son anteriores a Harmonic.
 
@@ -91,7 +94,7 @@ HAR-01 (límites del motor) no tiene un SHA propio; está en [RESEARCH_LOG.md](R
 
 ## 5. En curso
 
-**HAR-EVO-02A** — diseño de CLI **cerrado** ([HAR_EVO_01.md](HAR_EVO_01.md) §13). Código = 02B (autorización aparte). El subcomando sigue stub. HAR-PHYS-01 **pendiente**.
+Ningún hito Harmonic de código en curso. Siguiente opcional: **HAR-PHYS-01**.
 
 ---
 
@@ -102,9 +105,9 @@ Orden **orientativo**; se puede revisar tras cada experimento. Criterios = softw
 1. **HAR-VISION-02** — Documentar P1–P4. *Hecho (documental); no implementado en código.*
 2. **HAR-MODEL-01** — Inventario del modelo QCD y comparación pareada A/B/D. *Hecho* ([HAR_MODEL_01.md](HAR_MODEL_01.md)). A es el default; B/D experimentales; B no validada como QCD. PHYS-01 sigue aparte.
 3. **HAR-EXP-03** — Gates estelares y niveles. *Hecho* ([HAR_EXP_03.md](HAR_EXP_03.md)). VIS-01 A: niveles 94/299/8; 8 con stellar>0.4; 0 pesados/BH. A no se sustituyó.
-4. **HAR-EVO-01** — Primer **optimizador experimental** de poblaciones de `CosmicLaw` (H-03). *Hecho* ([HAR_EVO_01.md](HAR_EVO_01.md)). CLI `evolve` **sigue stub**.
-4b. **HAR-EVO-02** — Cablear el runner a la CLI. **02A cerrado** (contrato: `--generations` y `--rng-seed` obligatorios; sin `--seed` de archivo). 02B no implementar hasta autorización. No es Smolin.
-5. **HAR-PHYS-01** — Decisión explícita sobre aproximaciones físicas (p. ej. `running_alpha_s` / umbral 0.1). Opcional. **Pendiente**; no se adelanta en EVO-02A.
+4. **HAR-EVO-01** — Primer **optimizador experimental** de poblaciones de `CosmicLaw` (H-03). *Hecho* ([HAR_EVO_01.md](HAR_EVO_01.md)).
+4b. **HAR-EVO-02** — Cablear el runner a la CLI. *Hecho* (`evolve` ejecutable; `--generations` / `--rng-seed` / `--output-dir` obligatorios; sin `--seed`). No es Smolin.
+5. **HAR-PHYS-01** — Decisión explícita sobre aproximaciones físicas (p. ej. `running_alpha_s` / umbral 0.1). Opcional. **Pendiente**.
 6. **HAR-PRIME-01** — Primos vs compuestos cuando el modelo retenga α = 1/N de forma coherente. Hoy `library` no lo hace. **No se adelanta.**
 
 ### Fuera de alcance próximo
@@ -142,7 +145,7 @@ Detalle: [HARMONIC_VISION.md](HARMONIC_VISION.md) §2A.
 | Running 1-loop + umbral 0.1 | Salto ~40 % m_p y ~63 % fitness en el universo de referencia (puntos de malla, no derivada) |
 | Fallback PDG | Enmascara masas teóricas si se activa; 0/401 en VIS-01 |
 | Fitness ≠ habitabilidad | Lectura antrópica indebida |
-| CLI `evolve` stub | El runner HAR-EVO-01 no está en la CLI pública |
+| Publicación no atómica de 3 archivos `evolve` | Un corte a mitad de `--force` puede mezclar CSV nuevos y viejos; el staging protege el run incompleto |
 | `origin/main` atrasado | Push no autorizado; no forzar |
 | 16 warnings `rustc` históricos | No «arreglarlos» de paso en hitos de física |
 
@@ -150,7 +153,7 @@ Detalle: [HARMONIC_VISION.md](HARMONIC_VISION.md) §2A.
 
 ## 9. Próximo hito recomendado
 
-**HAR-EVO-02B** — implementar el contrato de [HAR_EVO_01.md](HAR_EVO_01.md) §13 **solo si se autoriza**. Hasta entonces `evolve` es stub. HAR-PHYS-01, PRIME-01 y Smolin **no** se adelantan.
+**HAR-PHYS-01** (opcional). PRIME-01 y Smolin **no** se adelantan.
 
 ---
 

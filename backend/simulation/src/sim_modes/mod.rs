@@ -1,5 +1,6 @@
 pub mod alpha_fixed;
 pub mod evolve;
+pub mod evo01;
 pub mod geometric;
 pub mod harmonic;
 pub mod lattice_gas;
@@ -8,9 +9,6 @@ pub mod map;
 pub mod simulation_engine;
 pub mod stream;
 pub mod validate;
-
-#[cfg(test)]
-mod evo01;
 #[cfg(test)]
 mod evo01_regression;
 #[cfg(test)]

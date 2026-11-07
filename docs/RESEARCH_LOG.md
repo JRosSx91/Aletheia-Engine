@@ -137,9 +137,21 @@ Estados de revisión: **cerrado** (commit local), **histórico** (pre-Harmonic o
 - **Método.** Genoma `alpha`, `alpha_s`, `gamma=G/G_N`; init como `map` (`e` y `g` uniformes); torneo k=2; E=0; σ=0.05 log-normal; Z indexada `(generación, slot)`; motor A. N=100, T=30, semilla 137137. Control: mismo slot, sin leer fitness.
 - **Datos.** `Aletheia-Engine-har-evo01-runs\` (fuera de Git). SHA-256 individuos `BE5D4841…F226D748`.
 - **Resultado.** Gen 0 idéntico (mejor 0.6435, mediana 0.3094). Selección gen 30: mejor 1.0 (saturación heurística), mediana 0.661, 23 % nivel 5, 91 % γ>9, 87 % α_s cerca de 0.118, diversidad 0.51→0.12. Control: mejor 0.649, mediana 0.326, padres 1.0/slot. Confirma el artefacto EXP-03, no cosmología.
-- **Limitaciones.** Una semilla. `gamma` no es α_g. CLI `evolve` sigue stub. No es Smolin ni habitabilidad.
+- **Limitaciones.** Una semilla. `gamma` no es α_g. No es Smolin ni habitabilidad.
 - **Informe.** [HAR_EVO_01.md](HAR_EVO_01.md).
 - **Revisión.** Cerrado en HAR-EVO-01C.
+
+---
+
+## HAR-EVO-02 — CLI `evolve`
+
+- **Pregunta.** ¿Se puede exponer el runner 01 sin cambiar el GA ni fingir compatibilidad con el stub (`--seed`, 500 generaciones)?
+- **Método.** Wrapper: validar límites → staging → `write_evo01_run` → publicar. `--generations` / `--rng-seed` / `--output-dir` obligatorios. `--force` para colisiones. Motor A.
+- **Datos.** Debug: SHA 01C. Release: mismos métricas/JSON; individuos `81121EF4…6D0F9B5B` (9 filas, ULP de α/`e_si`).
+- **Resultado.** CLI ejecutable. Dos debug y dos release independientes coinciden **dentro del perfil**. Genealogía y fitness idénticos entre perfiles. Plotly sigue en Python.
+- **Limitaciones.** `--force` no atómico a tres archivos. Fitness ≠ habitabilidad. No es Smolin.
+- **Informe.** [HAR_EVO_01.md](HAR_EVO_01.md) §13, [cli.md](cli.md).
+- **Revisión.** Cerrado en HAR-EVO-02C.
 
 ---
 

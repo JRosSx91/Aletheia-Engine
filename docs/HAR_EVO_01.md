@@ -2,13 +2,13 @@
 
 **Fase:** HAR-EVO-01A diseño + 01B implementación + 01C QA, **cerrado**.
 
-El **runner experimental** (`sim_modes/evo01.rs`) existe. El comando público **`evolve` permanece stub** (`println!`). No está terminado el modo CLI.
+El **runner experimental** (`sim_modes/evo01.rs`) existe. HAR-EVO-02 cablea el subcomando público **`evolve`** a ese runner. Motor Historical A. Optimizador H-03, no Smolin. Fitness ≠ habitabilidad.
 
 **HEAD de partida:** `547188af211ece68662172a57c30c4500cdf5904` (HAR-EXP-03).
 
 **Clase:** modelo computacional exploratorio. No es selección cosmológica, ni Smolin (H-04), ni habitabilidad.
 
-**Motor:** únicamente `AdvancedPhysicsEngine::new()` (variante **A**, Historical). No se toca `engine.rs`. `map`, `harmonic`, `evolve` y la CLI pública no cambian.
+**Motor:** únicamente `AdvancedPhysicsEngine::new()` (variante **A**, Historical). No se toca `engine.rs`. `map` y `harmonic` no cambian de comportamiento. `evolve` deja de ser stub en 02B.
 
 **Fuentes:** [ROADMAP.md](ROADMAP.md), [HARMONIC_VISION.md](HARMONIC_VISION.md) H-03, [HARMONIC_DIMENSIONS.md](HARMONIC_DIMENSIONS.md), [HAR_EXP_03.md](HAR_EXP_03.md) §9, [DECISIONS.md](DECISIONS.md) D-04, D-10, D-12, D-18.
 
@@ -312,19 +312,19 @@ Figuras: `evo01_fitness_sel_vs_ctrl.html`, `evo01_genes.html`, `evo01_levels.htm
 
 El JSON no lleva rutas ni marcas de tiempo. `fitness=1` es saturación de `min(1)` en la heurística, no habitabilidad. Una sola semilla **no** es evidencia estadística general.
 
-Corrida N=200, T=100 no ejecutada (opcional). HAR-EVO-01 **cerrado** como optimizador experimental. CLI `evolve` **no** cerrado.
+Corrida N=200, T=100 no ejecutada (opcional). HAR-EVO-01 **cerrado** como optimizador experimental. CLI `evolve` **cerrada** en HAR-EVO-02C.
 
 ---
 
-## 13. Interfaz pública (HAR-EVO-02A, diseño)
+## 13. Interfaz pública (HAR-EVO-02, cerrado)
 
-**Estado:** diseño **cerrado** (contrato aprobado). Sin código en este cierre. El subcomando `evolve` sigue siendo un `println!`. HAR-EVO-02B, si se autoriza, **reutiliza** `evo01.rs`; no reimplementa el GA. No es Smolin.
+**HAR-EVO-02A:** diseño. **02B:** implementación. **02C:** QA. Reutiliza `evo01.rs`; no reimplementa el GA. Motor **A**. H-03, no Smolin. Plotly: `scripts/plot_evo01.py` aparte.
 
 ### 13.1 Auditoría
 
-Hoy: `--seed` (archivo de genoma) obligatorio; `--generations` default 500; el stub ignora ambos. `--rng-seed` no existe en `evolve`. El runner es `#[cfg(test)]`. `map` escribe en el CWD. Esa CLI **nunca funcionó**; no se finge compatibilidad.
+Antes de 02B: `--seed` (archivo de genoma) obligatorio; `--generations` default 500; el stub ignoraba ambos. Esa CLI **nunca funcionó**; no se fingió compatibilidad. `map` sigue escribiendo en el CWD.
 
-Ruta mínima: publicar `mod evo01`; `evolve.rs` = validar + `write_evo01_run` vía directorio de staging; clap **sin** `--universes` y **sin** `--seed`.
+Ruta tomada: `pub mod evo01` (helpers de test siguen `cfg(test)`); `evolve.rs` = validar + `write_evo01_run` vía staging; clap **sin** `--universes` y **sin** `--seed`.
 
 ### 13.2 Contrato aprobado
 
@@ -349,10 +349,35 @@ Fijos: motor A; genes α, α_s, γ; k=2; E=0; dos brazos; nombres `evo01_individ
 
 Límites (antes del GA): N ∈ [2, 200]; T ∈ [0, 100]; σ ∈ (0, 0.2]; **2×N×(T+1) ≤ 50 000**. `--output-dir` no es un archivo. Si alguno de los tres CSV/JSON existe y no hay `--force`, abortar **sin** ejecutar. Escritura: staging en un subdirectorio temporal del destino, publicar solo si el runner termina; no borrar archivos ajenos. Si la publicación de tres `rename` no es atómica en Windows, el staging evita truncar el resultado previo antes de un run válido.
 
-### 13.3 Tests previstos (02B)
+### 13.3 Tests (02B)
 
-Parseo del ejemplo; rechazo de `evolve` sin `--generations` / `--rng-seed` / `--output-dir`; rechazo de `--seed`; límites N/T/σ y presupuesto; ruta archivo vs directorio; overwrite sin/con `--force`; CLI vs runner (bytes + SHA-256 01C); `map` intacto; `harmonic` sigue stub; `evolve` ya no es stub; `new()` Historical.
+Parseo del ejemplo; rechazo de `evolve` sin `--generations` / `--rng-seed` / `--output-dir`; rechazo de `--seed` y de `--universes`; límites N/T/σ (T=0 permitido) y fórmula de presupuesto; ruta archivo vs directorio; overwrite sin/con `--force`; CLI vs runner (bytes); `map` intacto; `harmonic` sigue stub; `evolve` ya no es stub; `new()` Historical.
 
 ### 13.4 Riesgos
 
-Mezclar `--seed` histórico con RNG; promover `evo01` al binario (warnings `dead_code` si no se `cfg(test)` lo exclusivo de tests); `--output-dir .` dentro del repo; no atómico al reemplazar tres archivos; leer la CLI como selección cósmica.
+Mezclar `--seed` histórico con RNG; `--output-dir .` dentro del repo; publicación de tres archivos no atómica en Windows; leer la CLI como selección cósmica.
+
+### 13.5 Notas de implementación y QA (02C)
+
+Validación **antes** del GA. Escritura: subdirectorio `.evo01-staging-<pid>` dentro de `--output-dir`; si el runner falla, se borra el staging y **no** se tocan los tres nombres previstos. El mensaje de éxito (`wrote …`) solo se imprime **después** de `publish_staged`. Con `--force`, tras un run válido se sustituye archivo a archivo (`rename`, o `copy`+`remove` si el `rename` cruza volúmenes). Eso **no** es atómico para el trío: una interrupción a mitad de publicación puede dejar un CSV nuevo y otro antiguo (salida parcial o mixta). El staging evita truncar resultados previos **antes** de tener una corrida completa. No se borran archivos ajenos. Un fallo a mitad de publicación puede dejar el staging; no hay transacción de tres archivos.
+
+El binario escribe CSV/JSON. Las figuras Plotly requieren `scripts/plot_evo01.py` (no `plot_evolution.py`).
+
+**Reproducibilidad por perfil** (N=100, T=30, σ=0.05, semilla 137137, Windows):
+
+- Dos debug independientes: mismos tres SHA-256 que HAR-EVO-01C.
+- Dos release independientes: mismos entre sí. Métricas y JSON = 01C. Individuos distintos del debug.
+- 9/6200 filas difieren solo en `alpha` (9) y `e_si` (4). Idénticos: `alpha_s`, `gamma`, `g_si`, fitness, nivel, padres, IDs, orden, genealogía.
+- |Δ|_máx = 5.20×10⁻¹⁸ en α (relativo 3.74×10⁻¹⁶), ~1 ULP; a veces 1–2 dígitos finales de `{:.16e}`, no siempre un único carácter ASCII.
+- No cambia decisiones evolutivas. No se altera el formato histórico para igualar perfiles.
+
+Hashes canónicos **debug**: individuos `BE5D4841…F226D748`, métricas `079A3AE9…C5BA10BA`, resumen `2D0AFC55…48DC77F7`. Release individuos: `81121EF4…6D0F9B5B`.
+
+`evolve` es un **optimizador experimental H-03** sobre el índice interno. No es selección cosmológica ni H-04. Fitness ≠ habitabilidad.
+
+Ejemplo (T=30 ⇒ generaciones 0..=30):
+
+```bash
+cd backend/simulation
+cargo run --release --bin rust-universe -- evolve --population 100 --generations 30 --mutation-sigma 0.05 --rng-seed 137137 --output-dir <dir>
+```
