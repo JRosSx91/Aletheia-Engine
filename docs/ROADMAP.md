@@ -89,7 +89,7 @@ HAR-01 (límites del motor) no tiene un SHA propio; está en [RESEARCH_LOG.md](R
 
 ## 5. En curso
 
-HAR-ROADMAP-01B (cierre de este documento). Tras el commit, el hito siguiente recomendado es **HAR-VISION-02** (solo texto).
+Ninguno de código. HAR-VISION-02 documentado (P1–P4, no implementadas). Siguiente técnico: **HAR-MODEL-01**.
 
 ---
 
@@ -97,7 +97,7 @@ HAR-ROADMAP-01B (cierre de este documento). Tras el commit, el hito siguiente re
 
 Orden **orientativo**; se puede revisar tras cada experimento. Criterios = software y trazabilidad, no descubrimiento físico. HAR-PHYS-01 **no** bloquea EXP-03 ni EVO-01.
 
-1. **HAR-VISION-02** — Documentar P1–P4 y alinear H-03…H-07 con el estado actual. **Sin código.** Criterio: fichas clasificadas; no reescribir la visión fundacional; no implementar premisas.
+1. **HAR-VISION-02** — Documentar P1–P4. *Hecho (documental); no implementado en código.*
 2. **HAR-MODEL-01** — Inventario del modelo computacional vigente (dominio del 1-loop, corte 0.1, `evaluate`, PDG vs teoría, campos de `CosmicLaw` no usados) **sin cambiar ecuaciones**. Criterio: [models.md](models.md) y/o ficha de límites actualizados; tests históricos verdes.
 3. **HAR-EXP-03** — Barrido α_s con un `CosmicLaw` que pase `stellar_score > 0.4`, sin nuevas ecuaciones. Criterio: informe de gates Jeans/Chandrasekhar/pesados.
 4. **HAR-EVO-01** — Primer **optimizador experimental** de poblaciones de `CosmicLaw` (H-03): genoma, mutación, selección, control sin selección. **No** afirma selección cosmológica. H-04 (Smolin) queda separado y no se implementa aquí. Criterio: diseño escrito; stub sustituido solo si el hito lo pide; fitness sigue siendo índice interno.
@@ -110,7 +110,9 @@ Orden **orientativo**; se puede revisar tras cada experimento. Criterios = softw
 
 ---
 
-## 7. Líneas estratégicas (conservar; no implementar aquí)
+## 7. Líneas estratégicas (documentadas; no implementadas)
+
+Detalle: [HARMONIC_VISION.md](HARMONIC_VISION.md) §2A.
 
 **P1 — Primacía de α.** Relación H-01. Invariantes adimensionales ≠ cambio de unidades MKSA.
 
@@ -145,7 +147,7 @@ Orden **orientativo**; se puede revisar tras cada experimento. Criterios = softw
 
 ## 9. Próximo hito recomendado
 
-**HAR-VISION-02** (documentación P1–P4). No iniciar código de modelo, `evolve` ni EXP-03 en esa sesión.
+**HAR-MODEL-01** (inventario del modelo vigente, sin cambiar ecuaciones). No iniciar EXP-03, `evolve` ni HAR-PHYS-01 en esa sesión.
 
 ---
 

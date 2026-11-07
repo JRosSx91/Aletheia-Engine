@@ -97,13 +97,22 @@ Estados de revisión: **cerrado** (commit local), **histórico** (pre-Harmonic o
 
 ---
 
+## HAR-VISION-02 — Premisas P1–P4
+
+- **Pregunta.** Recuperar las cuatro premisas fundacionales sin convertirlas en física demostrada.
+- **Método.** Documentación en [HARMONIC_VISION.md](HARMONIC_VISION.md) §2A.
+- **Resultado.** P1–P4 escritas (pregunta, motivación, propuesta histórica, interpretación, límites, vínculo H-01…H-07, futuros). No hay código.
+- **Limitaciones.** No hay bibliografía añadida; no hay código ni experimento numérico.
+- **Revisión.** Hito documental HAR-VISION-02B.
+
+---
+
 ## Propuestos (no ejecutados)
 
 Orden: [ROADMAP.md](ROADMAP.md) §6.
 
 | Id | Pregunta breve |
 |---|---|
-| HAR-VISION-02 | Fichas P1–P4 y alineación H-03…H-07; solo documentación |
 | HAR-MODEL-01 | Inventario de límites del modelo vigente sin cambiar ecuaciones |
 | HAR-EXP-03 | ¿Un universo con `stellar>0.4` muestra más gates o el gaussiano pesado? |
 | HAR-EVO-01 | Primer optimizador experimental (no Smolin) |

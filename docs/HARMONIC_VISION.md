@@ -128,7 +128,7 @@ Módulos actuales de la metáfora:
 
 **Estado en el código.** `evolve.rs` es un `println!`. `plot_evolution.py` rechaza CSV inexistentes. No hay `evolution_data.csv`.
 
-**Experimentos futuros.** HAR-EVO-01 (diseño de herencia/mutación/selección y de controles). HAR-EVO-02 (convergencia vs azar). Distinguir siempre optimización de `fitness` y cosmología.
+**Experimentos futuros.** HAR-EVO-01: primer **optimizador experimental** (esta hipótesis), no Smolin. HAR-EVO-02 (convergencia vs azar). Distinguir siempre optimización de `fitness` y cosmología.
 
 ---
 
@@ -152,7 +152,7 @@ Módulos actuales de la metáfora:
 
 **Estado en el código.** Contribución heurística en `engine.rs`; `evolve` stub; sin población ni árbol genealógico.
 
-**Experimentos futuros.** HAR-EVO-01 debe decidir explícitamente: (a) optimizador de puntuación, (b) modelo tipo Smolin con descendencia por colapso. No mezclar los informes.
+**Experimentos futuros.** No fusionar con HAR-EVO-01. Un esquema tipo Smolin, si se aborda, es un hito **aparte** (H-04), no el primer optimizador.
 
 ---
 
@@ -235,6 +235,92 @@ Módulos actuales de la metáfora:
 
 ---
 
+## 2A. Premisas históricas recuperadas — P1 a P4
+
+Texto HAR-VISION-02. Recupera cuatro preguntas de las conversaciones fundacionales (Gemini). **No implementadas.** No sustituyen H-01…H-07. Clase general: hipótesis especulativa + modelo exploratorio, salvo las piezas de física establecida que se marcan en cada ficha.
+
+Ninguna de las cuatro está demostrada por el laboratorio. α ≠ 1/137 exacto; \(\alpha^{-1}\) CODATA \(\approx 137{,}036\).
+
+### P1 — Primacía de Alpha
+
+**Clase.** Física establecida: α es el acoplamiento electromagnético adimensional \(\alpha = e^2/(4\pi\varepsilon_0\hbar c)\). Hipótesis especulativa: que α sea «más fundamental» que \(e,\hbar,c,\varepsilon_0\).
+
+**Pregunta original.** ¿Qué es más fundamental, α o las constantes \(e\), \(\hbar\), \(c\) y \(\varepsilon_0\) que intervienen en su expresión? ¿Podría un universo mantener α aproximadamente constante con representaciones dimensionales muy diferentes?
+
+**Motivación y propósito.** Separar lo que es un número puro (un acoplamiento) de lo que depende del sistema de unidades. Si dos descripciones solo difieren por un reescalado MKSA que deja fijos todos los adimensionales, no hay dos universos: hay un cambio de etiquetas.
+
+**Propuesta histórica de simulación.** Fijar α (p. ej. malla \(1/N\)) y sortear \(c,\hbar,\varepsilon_0\), derivando \(e\); comparar «historias» a α constante.
+
+**Interpretación científica actual.** Iso-Alpha **A/B** (HAR-04C, tests): reescalado λ=4 de parámetros EM; misma α SI; no es física nueva. Iso-Alpha **C**: misma α, α_s distinta; sí mueve masas teóricas y la heurística *dentro del modelo*. El CLI `alpha-fixed` aún deriva \(e\) y el motor **recalcula** α SI; no inyecta α objetivo. Para una primacía operativa hay que variar **adimensionales independientes** (α_s, cocientes de masas, densidades en unidades de Planck, …), no solo MKSA.
+
+**Limitaciones y correcciones.** No se concluye que α = 1/137 sea exacto ni un privilegio numérico demostrado. Las gráficas HAR-03 de `c_variant` no demuestran P1. Pendiente de respaldo externo: que α «prime» ontológicamente sobre \(e\).
+
+**Relación con H-01…H-07.** H-01 es el experimento de software de P1. H-02 (primalidad de \(N\)) es independiente. H-03/H-04 no sustituyen esta pregunta.
+
+**Experimentos futuros posibles.** Inyectar α en el motor; barridos a α fija de α_s y masas relativas (HAR-MODEL-01 / trabajo posterior). Sin `DimensionlessLaw` hasta hito propio.
+
+### P2 — Constantes evolutivas
+
+**Clase.** Hipótesis especulativa (variación temporal de acoplamientos) + modelo exploratorio.
+
+**Pregunta original.** ¿Podrían las constantes fundamentales variar durante la historia de **un mismo** universo?
+
+**Motivación y propósito.** Evaluar «viabilidad» en épocas distintas (BBN, estrellas, hoy) si los acoplamientos no fueran estrictamente constantes. Conservar la idea de una *trayectoria* de leyes, no solo un punto `CosmicLaw`.
+
+**Propuesta histórica de simulación.** Curvas \(\alpha(t)\), \(\alpha_s(t)\) y parámetros gravitacionales adimensionales a lo largo del tiempo cósmico; puntuar cada época.
+
+**Interpretación científica actual.** Hay que separar tres mecanismos que el discurso histórico mezclaba:
+
+1. **Running con la escala de energía** μ (el `running_alpha_s` del motor: 1-loop + corte `denom>0.1`). No es variación en el tiempo cósmico.
+2. **Variación respecto al tiempo cosmológico** \(t\) (lo que P2 pregunta). El campo `temporal_evolution_rate` se muestrea y **no entra** al fitness ([HARMONIC_DIMENSIONS.md](HARMONIC_DIMENSIONS.md)).
+3. **Evolución entre generaciones de universos** (H-03/H-04, `evolve`). Otro objeto.
+
+Las trayectorias α(\(t\)), α_s(\(t\)) son **propuestas de modelado**, no hechos observados en este repo ni en el motor.
+
+**Limitaciones y correcciones.** No se afirma que α_s deba ser «más fuerte en nucleosíntesis y después más débil en formación estelar». Esa receta histórica no está justificada aquí. El running 1-loop no es cuantitativo en acoplamiento fuerte (HAR-EXP-01/02). Evidencia cosmología observacional de \(\dot\alpha/\alpha\): **pendiente de respaldo**; no se cita literatura inventada.
+
+**Relación con H-01…H-07.** Distinto de H-03 (poblaciones) y H-04 (Smolin). El running actual toca H-01/C (α_s) solo como μ, no como \(t\). H-05 usa épocas como capas narrativas, no como \(\alpha(t)\).
+
+**Experimentos futuros posibles.** Definir un parámetro adimensional de deriva temporal y evaluarlo en etapas; no confundirlo con `running_alpha_s`. Fuera de HAR-MODEL-01 salvo inventario.
+
+### P3 — Pozo antrópico gravitacional
+
+**Clase.** Hipótesis especulativa (región de parámetros que favorece estructuras) + heurística ya presente en el fitness.
+
+**Pregunta original.** ¿Existe una región de parámetros gravitacionales y cosmológicos que favorezca la formación de estructuras duraderas?
+
+**Motivación y propósito.** Conservar el estudio de expansión, formación estelar y colapso como *preguntas* sobre G, densidad y energía oscura, no como un veredicto antrópico.
+
+**Propuesta histórica de simulación.** Explorar G (o \(G m^2/\hbar c\)), densidad, curvatura y un término de energía oscura; ver expansión frente a colapso; puntuar «pozos» habitables.
+
+**Interpretación científica actual.** En relatividad, la historia de escala \(a(t)\) depende **conjuntamente** de densidad, curvatura espacial y energía oscura / Λ (esquema tipo Friedmann). Un solo número G no decide un Big Crunch. Parámetros adimensionales posibles en un modelo: \(G m_p^2/\hbar c\), \(\rho/\rho_{\mathrm{Planck}}\), \(\Omega_k\), \(\Omega_\Lambda\) — **no** están implementados como tal. El motor usa recortes de tiempo de caída libre y de Hubble con densidades **fijas** (`1e-26`, etc.; [models.md](models.md)): heurística, no integración de Friedmann.
+
+**Limitaciones y correcciones.** Incrementar G **no** provoca necesariamente un Big Crunch. Los umbrales temporales del código (p. ej. \(10^8\) yr) **no** son leyes universales. El término cosmología del fitness (peso 0,15) no es probabilidad de estructura. HAR-EXP-02: en el barrido de α_s de referencia, `cosmology_term` no se movió.
+
+**Relación con H-01…H-07.** Independiente de P1 salvo adimensionales mixtos. H-04 usa un proxy de agujeros negros (Chandrasekhar), no un pozo gravitacional. H-07 no resuelve Einstein.
+
+**Experimentos futuros posibles.** Barridos de `g` y `dark_energy_density` registrando Hubble/freefall **como salidas del modelo**; no interpretarlos como Friedmann. Sensibilidad de G ya hay tests de software (HAR-04C), no un mapa de pozos.
+
+### P4 — Lotería de las simetrías
+
+**Clase.** Hipótesis especulativa (por qué tres generaciones y esas cargas) + analogía de consistencia matemática. Física establecida de fondo: el Modelo Estándar es una teoría gauge quiral cuyas anomalías deben cancelarse; ese hecho **no** se reproduce en el código.
+
+**Pregunta original.** ¿Por qué nuestro universo tiene tres generaciones fermiónicas y las cargas eléctricas conocidas?
+
+**Motivación y propósito.** Conservar la exploración de *estructuras alternativas* de partículas: no solo sortear masas, sino preguntar qué asignaciones son internamente consistentes.
+
+**Propuesta histórica de simulación.** Generar cargas y contenidos de representaciones al azar; filtrar con una regla algebraica sencilla; comparar «universos» supervivientes.
+
+**Interpretación científica actual.** Una teoría gauge quiral exige cancelación de anomalías (cúbicas de grupo, mixtas con hipercarga, mixtas gravitacionales, y condiciones globales tipo Witten en SU(2), entre otras). Intervienen **representaciones**, **hipercarga** \(Y\), **quiralidad** (izquierdas vs derechas) y el número de colores/weak. Eso no se reduce a sortear \(q\in\mathbb{Q}\) independientes.
+
+**Limitaciones y correcciones.** La receta histórica \(3(q_u+q_d)+q_e=0\) **no** es una comprobación completa de cancelación de anomalías (omite, entre otras, multiplicidad de color, dobletes débiles, hipercarga frente a carga eléctrica, anomalías mixtas y la gravitacional). **No** se afirma que tres generaciones estén exigidas *únicamente* por las anomalías del SM: la cancelación puede darse **generación a generación**; el número tres es un dato empírico, no un teorema de este laboratorio. Generar cargas aleatorias sin representaciones produce casi seguro teorías inconsistentes o equivalentes a un reetiquetado.
+
+**Relación con H-01…H-07.** No hay módulo de gauge. H-02 (primalidad) no sustituye P4. H-05 capa «física» es narrativa. No implementar un checksum de anomalías como si fuera el SM.
+
+**Experimentos futuros posibles.** Fuera de la cola inmediata. Si algún día hay un hito de contenido de materia: partir de representaciones, no de un sorteo de \(q\). Pendiente de respaldo: cualquier «lotería» que pretenda explicar tres generaciones.
+
+---
+
 ## 3. Correspondencia intención ↔ código (resumen)
 
 | Hipótesis | ¿Hay código que *pretenda* abordarla? | ¿La aborda de forma coherente hoy? |
@@ -246,8 +332,12 @@ Módulos actuales de la metáfora:
 | H-05 Capas | `complexity_level` | Etiquetas; sin química/biología/cultura. |
 | H-06 Autocomprensión | — | Solo analogía. |
 | H-07 Autómatas | `stream`, `lattice` | Autómatas; no cosmología de BH. |
+| P1 Primacía de α | Tests Iso-A/B/C; CLI `alpha-fixed` | Documentada; α objetivo no inyectada en el CLI |
+| P2 Constantes evolutivas | Campo `temporal_evolution_rate`; running en μ | Documentada; no hay α(\(t\)) |
+| P3 Pozo gravitacional | Heurística Hubble/freefall; `g` | Documentada; no Friedmann |
+| P4 Lotería de simetrías | — | Documentada; **no** implementada |
 
-Reproducibilidad **del software** (HAR-02: `--rng-seed`; HAR-03: CSV/Python) no es validación de H-01…H-07.
+Reproducibilidad **del software** (HAR-02: `--rng-seed`; HAR-03: CSV/Python) no es validación de H-01…H-07 ni de P1–P4.
 
 ---
 
@@ -261,7 +351,7 @@ Esta lista es el plan **en el momento de HAR-04A** (`a1473ab`). No es el backlog
 4. **HAR-EVO-02 — Convergencia y azar.** *Pendiente.*
 5. **HAR-PRIME-01 — Primalidad.** *Pendiente*; no bloquea toda experimentación (HAR-PHYS-01 no es requisito absoluto).
 
-Cola vigente, P1–P4 y política Git: [ROADMAP.md](ROADMAP.md). Fuera de esa cola: no acoplar autómatas 3D al escáner; no modelar biología ni cognición; no reescribir la landing como si las hipótesis estuvieran demostradas.
+Cola vigente y política Git: [ROADMAP.md](ROADMAP.md). P1–P4 están **documentadas** en la §2A, no implementadas. Siguiente hito técnico: HAR-MODEL-01. Fuera de esa cola: no acoplar autómatas 3D al escáner; no modelar biología ni cognición; no reescribir la landing como si las hipótesis estuvieran demostradas.
 
 ---
 
