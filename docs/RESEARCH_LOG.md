@@ -1,0 +1,111 @@
+# Registro de investigación
+
+Resúmenes. Los números completos están en los informes citados. Semilla documental: `137137`.
+
+Estados de revisión: **cerrado** (commit local), **histórico** (pre-Harmonic o auditoría), **propuesto**.
+
+---
+
+## HAR-01 — Límites del motor original
+
+- **Pregunta.** Qué calcula realmente el motor frente a lo que narran `validate` y los comentarios.
+- **Método.** Lectura de `engine.rs` / `validate.rs`; snapshot de masas teóricas.
+- **Datos.** Universo de referencia (`alpha_s = 0.1181`, α SI CODATA).
+- **Resultado.** Masas u/d constituyentes quirales fijas (~310 MeV); binding QCD simplificado; `validate` falla el nivel atómico; fallback PDG y feature `empirical_validation` no son predicción independiente. Funciones MIT bag no se llaman.
+- **Limitaciones.** No hubo barrido sistemático de α_s.
+- **Informe.** [models.md](models.md); tests `theoretical_hadron_masses_match_har01_snapshot_not_pdg`.
+- **Revisión.** Cerrado en la línea HAR-02/04 (software).
+
+---
+
+## HAR-02 — Reproducibilidad
+
+- **Pregunta.** ¿El muestreo y los CSV son deterministas?
+- **Método.** `--rng-seed` (`StdRng`); tests de replay; distinción `evolve --seed` (archivo) vs RNG.
+- **Datos.** Semilla `137137`.
+- **Resultado.** Misma semilla → mismos universos y scores. Sin flag, `thread_rng()`. Columna map `alpha` = **1/α**, no α.
+- **Limitaciones.** No valida física; solo software.
+- **Informe.** [cli.md](cli.md). Commit `b718e80`.
+- **Revisión.** Cerrado.
+
+---
+
+## HAR-03 — Python / visualización restaurada
+
+- **Pregunta.** ¿Se pueden leer y graficar los CSV actuales?
+- **Método.** `harmonic_csv.py` + Plotly/matplotlib; venv `Aletheia-Engine-har03-venv` fuera de Git.
+- **Resultado.** Loaders por modo; stubs `harmonic`/`evolve` no inventan archivos.
+- **Limitaciones.** Las figuras no son evidencia de 137 privilegiado.
+- **Informe.** [analysis.md](analysis.md). Commit `e30b86d`.
+- **Revisión.** Cerrado.
+
+---
+
+## HAR-04A / 04B — Visión y dimensiones
+
+- **Pregunta.** Qué se quería preguntar (H-01…H-07) y qué parámetros son dimensionales vs adimensionales.
+- **Resultado.** Visión clasificada (establecida / especulativa / exploratoria / analogía). Inventario: varios campos de `CosmicLaw` no entran al fitness.
+- **Informes.** [HARMONIC_VISION.md](HARMONIC_VISION.md), [HARMONIC_DIMENSIONS.md](HARMONIC_DIMENSIONS.md). Commits `a1473ab`, `ba124aa`.
+- **Revisión.** Cerrado como documentación. VISION §4 **no** actualiza HAR-04C ni EXP-01/02.
+
+---
+
+## HAR-04C — Iso-Alpha A/B/C y observables
+
+- **Pregunta.** ¿Qué es invariante al reescalar MKSA y qué mueve α_s?
+- **Método.** Motores A/B (λ=4 en e, ε₀, ħ, c) y C (α_s ×1.05). Separar `ModelObservables` y `HeuristicBreakdown`.
+- **Resultado.** A/B: misma α, Coulomb comparable fuera de gates. C: misma α, masas hadrónicas y fitness pueden moverse. `evaluate()` bitwise-idéntico al fitness histórico. Predicado PDG unificado.
+- **Limitaciones.** Iso-B no es un universo físicamente distinto (unidades). C no es QCD NNLO.
+- **Informe.** Código `harmonic_regression.rs`; [models.md](models.md). Commits `bd16cf0` … `7e747a1`.
+- **Revisión.** Cerrado (software).
+
+---
+
+## HAR-VIS-01 — Población de 401 universos
+
+- **Pregunta.** ¿Qué aspecto tiene un map reproducible con observables exportados?
+- **Método.** `map --universes 400 --rng-seed 137137 --observables-csv` (bucle `0..=N` → 401 filas). Plotly en `plot_observables.py`.
+- **Datos.** `Aletheia-Engine-har-vis01-runs\` (fuera de Git). SHA-256 `engine_evaluations.csv` `2D19E32D…D0C715`; histórico `FC966CE1…9F9268`.
+- **Resultado.** 30 columnas; PDG = 0 en esa población; figura `obs_alphas_vs_npdiff.html` con dos nubes.
+- **Limitaciones.** Exploratorio; no es un landscape físico.
+- **Informe.** [analysis.md](analysis.md). Commit `e0102e3`.
+- **Revisión.** Cerrado.
+
+---
+
+## HAR-EXP-01 — Bifurcación α_s / Δm
+
+- **Pregunta.** Qué parte del motor genera las dos ramas en α_s vs Δm.
+- **Método.** Clasificar por `denom` de `running_alpha_s(1 GeV)`; barrido 1-parámetro; overlay Plotly.
+- **Datos.** VIS-01 + `Aletheia-Engine-har-exp01-runs\`.
+- **Resultado.** 22 muestras `denom>0.1` (α_s ≲ 0.1392266), 379 en el recorte (devuelve α_s_ref). PDG 0. Hipótesis D (PDG) y B (eje oculto) rechazadas. A/C: el `if denominator > 0.1`.
+- **Limitaciones.** 1-loop no es cuantitativo en acoplamiento fuerte; hueco de muestreo (0.135, 0.139).
+- **Informe.** [HAR_EXP_01.md](HAR_EXP_01.md). Commit `3fba121`.
+- **Revisión.** Cerrado.
+
+---
+
+## HAR-EXP-02 — Propagación del salto
+
+- **Pregunta.** Cómo llega el corte a masas, heurística y fitness.
+- **Método.** Mismo runner; 936 puntos; `evaluate()`; cuatro paneles Plotly.
+- **Datos.** `Aletheia-Engine-har-exp02-runs\alpha_s_scan.csv`, `exp02_qcd_propagation.html`.
+- **Resultado.** Entre puntos de malla 0.139223 y 0.139227: α_s(1 GeV) −90 %, m_p +40 %, Δm −11 %, BBN +168 %, fitness +63 % (**no** son derivadas continuas). Cosmología plana. Stellar evaluado = 0. Heavy/BH no evaluados. PDG 0. Fitness no saturado. Gate BBN a α_s ≳ 1.497 cambia el nivel, no el fitness.
+- **Limitaciones.** Universo de referencia no abre la etapa pesada; porcentajes ligados a esos dos nodos de malla.
+- **Informe.** [HAR_EXP_02.md](HAR_EXP_02.md). Commit `e550654`.
+- **Revisión.** Cerrado (`e550654`); CSV/HTML fuera del repo.
+
+---
+
+## Propuestos (no ejecutados)
+
+Orden: [ROADMAP.md](ROADMAP.md) §6.
+
+| Id | Pregunta breve |
+|---|---|
+| HAR-VISION-02 | Fichas P1–P4 y alineación H-03…H-07; solo documentación |
+| HAR-MODEL-01 | Inventario de límites del modelo vigente sin cambiar ecuaciones |
+| HAR-EXP-03 | ¿Un universo con `stellar>0.4` muestra más gates o el gaussiano pesado? |
+| HAR-EVO-01 | Primer optimizador experimental (no Smolin) |
+| HAR-PHYS-01 | ¿Se acota o cambia `running_alpha_s`? Opcional; no bloquea lo anterior |
+| HAR-PRIME-01 | Primos vs compuestos cuando α = 1/N sea coherente |

@@ -8,7 +8,7 @@ This is not a production engine and not a validated physical theory. It is a per
 
 > Harmonic-137 and the stories around α ≈ 1/137, libraries of universes, or cosmic selection are **working hypotheses**. A high `fitness` score or a green internal test does **not** prove those hypotheses.
 
-**Further docs (Spanish):** [models and equations](docs/models.md) · [CLI and Python](docs/cli.md) · [theory summary](docs/THEORY_SUMMARY.md)
+**Further docs (Spanish):** [roadmap](docs/ROADMAP.md) · [decisions](docs/DECISIONS.md) · [research log](docs/RESEARCH_LOG.md) · [models and equations](docs/models.md) · [CLI and Python](docs/cli.md) · [theory summary](docs/THEORY_SUMMARY.md)
 
 ---
 
@@ -26,11 +26,11 @@ Three pieces, three runtimes:
 
 ### How it got here
 
-**Fact (Git history, 5 commits on `main`):** the repo starts as a monorepo (Sep 2025); one commit presents a “calibration / validation pass” of the constants engine; then “Aletheia upgrade” and a **binary grid**; local HEAD `1339fef` adds lattice gas, streaming, and deterministic grid tests.
+**Historical (early Git on `main`):** the repo starts as a monorepo (Sep 2025); one commit presents a “calibration / validation pass” of the constants engine; then “Aletheia upgrade” and a **binary grid**; lattice gas, streaming, and grid tests follow. That era ended at `origin/main` = `d58c16e` (3D FluidCore). The “5 commits / HEAD `1339fef`” snapshot below is **stale as a description of current `main`**.
 
-**Fact (code):** the CLI still introduces itself as *“El Armónico 137 — The Cosmic Library”* (`main.rs`). Modes `map`, `library`, `alpha-fixed`, `geometric`, and `validate` exist. `harmonic` and `evolve` are stubs. The landing page (local work) narrates the Harmonic-137 → Aletheia step.
+**Current local `main` (baseline `e550654` and later docs):** Harmonic-137 work is on this branch and **has not been pushed**. `--rng-seed` makes Monte Carlo replayable; `map --observables-csv` exports `EngineEvaluation`; Python loaders match CLI CSV names ([cli.md](docs/cli.md), [analysis.md](docs/analysis.md)). HAR-04B/C, HAR-VIS-01, HAR-EXP-01/02 are done. Status: [docs/ROADMAP.md](docs/ROADMAP.md).
 
-**Inferred, not shown by Git:** a daily “Rust writes CSV → Python/Plotly” workflow. Python scripts are in the tree, but **filenames do not match** the current CLI ([cli.md](docs/cli.md), Spanish).
+**Fact (code):** the CLI still introduces itself as *“El Armónico 137 — The Cosmic Library”* (`main.rs`). Modes `map`, `library`, `alpha-fixed`, `geometric`, and `validate` exist. `harmonic` and `evolve` are stubs. The landing page narrates the Harmonic-137 → Aletheia step.
 
 Intellectual line that the code and UI **claim**, not that the lab **has confirmed**:
 
@@ -42,7 +42,7 @@ Intellectual line that the code and UI **claim**, not that the lab **has confirm
 
 ## 2. Capability inventory
 
-Statuses: **verified** (ALE-01B / ALE-02A) · **implemented, not verified** (code exists; those rounds did not run it) · **partial** · **pending**.
+Statuses: **verified** (ALE-01B / ALE-02A for 3D) · **regression-tested** (Harmonic CLI/CSV; software tests, not lab physics) · **partial** · **pending** (stub).
 
 ### 2.1 Harmonic-137 — numerical exploration
 
@@ -50,14 +50,14 @@ Shared goal: sample `CosmicLaw`, score with `calculate_enhanced_fitness`, write 
 
 | Module | Goal | Implementation | I/O | Status | Limits |
 |---|---|---|---|---|---|
-| `map` | Monte Carlo of universes | `sim_modes/map.rs` | `-u` universes → `landscape_data_enhanced.csv` | Implemented, not verified | Unseeded RNG; default 10⁶ |
-| `library` | “Books” α = 1/N | `library.rs` | min/max α, samples → `cosmic_library.csv` + literary genres | Implemented, not verified | Narrative ≠ physics |
-| `alpha-fixed` | Fix α, derive `e` | `alpha_fixed.rs` | denominator, samples → `alpha_fixed_analysis.csv` | Implemented, not verified | The “¡CONFIRMADO!” print is not a test |
-| `geometric` | Curvature / 5D ratios | `geometric.rs` | samples → `geometric_analysis.csv` | Partial | Those fields **do not** enter the fitness |
-| `validate` | Compare vs lab | `validate.rs` | stdout | Partial | Tautological age; masses may be empirical |
-| `harmonic` | Harmonic search | `harmonic.rs` | `--samples` | Pending | A `println!` |
-| `evolve` | Genome evolution | `evolve.rs` | `--seed`, `--generations` | Pending | A `println!` |
-| Python scripts | Plots / “Adán” | `backend/simulation/scripts/` | CSV/JSON | Pending | Expected CSV names ≠ CLI output |
+| `map` | Monte Carlo of universes | `sim_modes/map.rs` | `-u`, `--rng-seed`, optional `--observables-csv` → historical CSV + 30-col evaluation CSV | Regression-tested | Default 10⁶; column `alpha` = 1/α; loop `0..=N` |
+| `library` | “Books” α = 1/N | `library.rs` | min/max α, `--rng-seed` → `cosmic_library.csv` | Regression-tested | Engine still recomputes SI α; narrative ≠ physics |
+| `alpha-fixed` | Fix α, derive `e` | `alpha_fixed.rs` | denominator, `--rng-seed` → `alpha_fixed_analysis.csv` | Regression-tested | Variants of c/ħ/ε₀ do not enter the engine; “¡CONFIRMADO!” is not a test |
+| `geometric` | Curvature / 5D ratios | `geometric.rs` | `--rng-seed` → `geometric_analysis.csv` | Partial | Those fields **do not** enter the fitness |
+| `validate` | Compare vs lab | `validate.rs` | stdout | Partial | Tautological age; atomic level fails; masses may be empirical |
+| `harmonic` | Harmonic search | `harmonic.rs` | `--samples` | Pending (stub) | A `println!` |
+| `evolve` | Genome evolution | `evolve.rs` | `--seed`, `--generations` | Pending (stub) | A `println!`; `--seed` is a genome path, not RNG |
+| Python scripts | Plots / “Adán” | `backend/simulation/scripts/` | CSV/JSON | Regression-tested | Names match CLI; venv outside Git; figures are not lab QCD |
 
 Flag detail: [docs/cli.md](docs/cli.md) (Spanish).
 

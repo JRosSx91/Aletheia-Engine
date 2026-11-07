@@ -2,9 +2,9 @@
 
 **Idioma:** español.  
 **Alcance:** intención histórica y marco metodológico.  
-**No sustituye:** [models.md](models.md) (ecuaciones y límites del código), [THEORY_SUMMARY.md](THEORY_SUMMARY.md) (resumen de piezas), [cli.md](cli.md), [analysis.md](analysis.md).
+**No sustituye:** [ROADMAP.md](ROADMAP.md) (estado y prioridades), [DECISIONS.md](DECISIONS.md), [RESEARCH_LOG.md](RESEARCH_LOG.md), [models.md](models.md) (ecuaciones del código), [THEORY_SUMMARY.md](THEORY_SUMMARY.md), [cli.md](cli.md), [analysis.md](analysis.md).
 
-Este texto documenta **qué se quería preguntar**. Lo que el software **hace hoy** está en `models.md`. Un `fitness` alto, un CSV reproducible o una gráfica no demuestran las hipótesis siguientes.
+Este texto documenta **qué se quería preguntar**. Lo que el software **hace hoy** está en `models.md` y el [ROADMAP.md](ROADMAP.md). Un `fitness` alto, un CSV reproducible o una gráfica no demuestran las hipótesis siguientes.
 
 Clasificación usada en cada ficha:
 
@@ -78,9 +78,9 @@ Módulos actuales de la metáfora:
 
 **Sesgos.** Confundir un rescalado de unidades con un universo nuevo. El código actual deriva \(e\) con \(c,\hbar,\varepsilon_0\) aleatorios y luego **vuelve a calcular α con las constantes SI globales**: no realiza el experimento iso-α. Las gráficas HAR-03 de `c_variant` no demuestran «primacía de alpha».
 
-**Estado en el código.** `alpha_fixed.rs` y `library.rs` expresan la intención; el motor no conserva α objetivo. Tests HAR-02 documentan esa inconsistencia a propósito.
+**Estado en el código.** `alpha-fixed` y `library` siguen expresando la intención en el CLI: derivan \(e\) y el motor **recalcula** α SI. Tests HAR-02 documentan esa inconsistencia. **Estado actual:** HAR-04B inventarió dimensionales; HAR-04C añadió Iso-Alpha A/B/C **en tests** (`new` vs `new_with_em`, variación de α_s). Eso no inyecta α objetivo en el CLI. La cola vigente está en [ROADMAP.md](ROADMAP.md), no en la lista HAR-04A de la §4.
 
-**Experimentos futuros (no implementar aquí).** HAR-04B: separar constantes dimensionales de adimensionales. Solo entonces repetir iso-α con α inyectada en el motor.
+**Experimentos futuros (texto HAR-04A, conservado).** HAR-04B: separar constantes dimensionales de adimensionales. Solo entonces repetir iso-α con α inyectada en el motor. *Hecho parcial:* inventario 04B e Iso-Alpha de test 04C; α objetivo en el CLI sigue pendiente.
 
 ---
 
@@ -251,21 +251,17 @@ Reproducibilidad **del software** (HAR-02: `--rng-seed`; HAR-03: CSV/Python) no 
 
 ---
 
-## 4. Próximos hitos (no implementar en este documento)
+## 4. Cola escrita en HAR-04A (histórica)
 
-Secuencia incremental. Cada fase exige revisión explícita antes de escribir código de modelo.
+Esta lista es el plan **en el momento de HAR-04A** (`a1473ab`). No es el backlog vigente.
 
-1. **HAR-04B — Constantes y adimensionales.** Inventariar qué hay en `CosmicLaw` que sea dimensional, qué es adimensional, qué se muestrea y no se usa. Diseñar unidades o invariantes para que iso-α (H-01) sea planteable. Sin cambiar aún las fórmulas de hadrones si no hace falta para el inventario.
+1. **HAR-04B — Constantes y adimensionales.** *Estado actual: hecho* (`ba124aa`, [HARMONIC_DIMENSIONS.md](HARMONIC_DIMENSIONS.md)).
+2. **HAR-04C — Consistencia y rediseño controlado.** *Estado actual: hecho en software* (trazas α, Iso-Alpha A/B/C, `EngineEvaluation`; commits `bd16cf0`–`7e747a1`). No se sustituyeron ecuaciones hadrónicas. α objetivo en el CLI y rediseño de PDG/fitness siguen abiertos como trabajo posterior.
+3. **HAR-EVO-01 — Herencia, mutación, selección.** *Pendiente.* El backlog vigente lo plantea como **primer optimizador experimental**, distinto de H-04 (Smolin).
+4. **HAR-EVO-02 — Convergencia y azar.** *Pendiente.*
+5. **HAR-PRIME-01 — Primalidad.** *Pendiente*; no bloquea toda experimentación (HAR-PHYS-01 no es requisito absoluto).
 
-2. **HAR-04C — Consistencia y rediseño controlado.** Decidir si α objetivo entra en el motor; qué hacer con el fallback PDG; qué términos del fitness son filtros físicos simplificados y cuáles son knobs. Conservar el comportamiento histórico detrás de tests (HAR-02) **antes** de sustituir ecuaciones. No introducir hipótesis nuevas de contrabando.
-
-3. **HAR-EVO-01 — Herencia, mutación, selección.** Diseño (no cosmología literal): representación del genoma, operadores, criterio de selección, **controles** (población sin selección). Elegir si el objeto es optimizar `fitness` (H-03) o un esquema tipo Smolin (H-04); no fusionarlos.
-
-4. **HAR-EVO-02 — Convergencia y azar.** Experimentos con semillas fijas: ¿el linaje se acerca al universo de referencia más que un control aleatorio? Informar distancias y no «descubrimiento de 137».
-
-5. **HAR-PRIME-01 — Primalidad.** Solo con modelo físico coherente (tras HAR-04C). Comparar \(N\) primos y compuestos con el mismo presupuesto de muestras y un test pre-registrado. El libro 137 es un punto de la malla, no un blanco a confirmar.
-
-Fuera de esta cola: no acoplar autómatas 3D al escáner; no modelar biología ni cognición; no reescribir la landing como si las hipótesis estuvieran demostradas.
+Cola vigente, P1–P4 y política Git: [ROADMAP.md](ROADMAP.md). Fuera de esa cola: no acoplar autómatas 3D al escáner; no modelar biología ni cognición; no reescribir la landing como si las hipótesis estuvieran demostradas.
 
 ---
 
