@@ -18,6 +18,7 @@ MAP_FILENAME = "landscape_data_enhanced.csv"
 LIBRARY_FILENAME = "cosmic_library.csv"
 ALPHA_FIXED_FILENAME = "alpha_fixed_analysis.csv"
 GEOMETRIC_FILENAME = "geometric_analysis.csv"
+EVALUATION_FILENAME = "engine_evaluations.csv"
 
 # Column `alpha` is the reciprocal of the SI fine-structure constant.
 MAP_COLUMNS = [
@@ -98,6 +99,72 @@ GEOMETRIC_UNUSED_BY_FITNESS = [
     "temporal_rate",
 ]
 
+# Optional EngineEvaluation export. `alpha_si` is α; never named `alpha` (map's 1/α).
+EVALUATION_COLUMNS = [
+    "sample_id",
+    "rng_seed",
+    "g_si",
+    "e_si",
+    "alpha_si",
+    "inverse_alpha_si",
+    "alpha_s_reference",
+    "alpha_s_mu_ref_gev",
+    "theoretical_proton_mass_kg",
+    "theoretical_neutron_mass_kg",
+    "theoretical_np_mass_diff_kg",
+    "theoretical_pion_mass_kg",
+    "validated_proton_mass_kg",
+    "validated_neutron_mass_kg",
+    "validated_pion_mass_kg",
+    "used_pdg_hadron_fallback",
+    "hubble_time_s",
+    "jeans_mass_kg",
+    "coulomb_barrier_j",
+    "chandrasekhar_mass_kg",
+    "nucleon_stability_gate_passed",
+    "cosmology_term",
+    "nucleosynthesis_term",
+    "stellar_term",
+    "heavy_element_term",
+    "black_hole_term",
+    "level_bonus_applied",
+    "complexity_level",
+    "fitness_uncapped",
+    "fitness",
+]
+EVALUATION_NUMERIC = EVALUATION_COLUMNS
+EVALUATION_OPTIONAL = [
+    "hubble_time_s",
+    "jeans_mass_kg",
+    "coulomb_barrier_j",
+    "chandrasekhar_mass_kg",
+    "cosmology_term",
+    "nucleosynthesis_term",
+    "stellar_term",
+    "heavy_element_term",
+    "black_hole_term",
+]
+EVALUATION_UNITS = {
+    "g_si": "m³ kg⁻¹ s⁻² (CosmicLaw.g sampled)",
+    "e_si": "C (CosmicLaw.e sampled)",
+    "alpha_si": "1 (SI MKSA low-energy α)",
+    "inverse_alpha_si": "1 (1/α_si)",
+    "alpha_s_reference": "1 (α_s at μ_ref)",
+    "alpha_s_mu_ref_gev": "GeV",
+    "theoretical_proton_mass_kg": "kg",
+    "theoretical_neutron_mass_kg": "kg",
+    "theoretical_np_mass_diff_kg": "kg",
+    "theoretical_pion_mass_kg": "kg",
+    "validated_proton_mass_kg": "kg",
+    "validated_neutron_mass_kg": "kg",
+    "validated_pion_mass_kg": "kg",
+    "hubble_time_s": "s",
+    "jeans_mass_kg": "kg",
+    "coulomb_barrier_j": "J",
+    "chandrasekhar_mass_kg": "kg",
+    "fitness": "1 (heuristic index)",
+}
+
 
 class CsvSchemaError(ValueError):
     """CSV exists but does not match the Harmonic-137 writer schema."""
@@ -147,6 +214,18 @@ SCHEMA_GEOMETRIC = Schema(
     numeric=tuple(GEOMETRIC_COLUMNS),
     unused_by_fitness=tuple(GEOMETRIC_UNUSED_BY_FITNESS),
     notes="Geometric columns are sampled but do not enter calculate_enhanced_fitness.",
+)
+SCHEMA_EVALUATION = Schema(
+    name="engine-evaluation",
+    columns=tuple(EVALUATION_COLUMNS),
+    numeric=tuple(EVALUATION_NUMERIC),
+    notes=(
+        "g_si and e_si are sampled CosmicLaw inputs. "
+        "alpha_si is engine α. inverse_alpha_si is 1/α_si. "
+        "This file is not landscape_data_enhanced.csv; that file still names 1/α as `alpha`. "
+        "Empty cells are stages that did not run (None), not zeros. "
+        "Units: g m³ kg⁻¹ s⁻²; e C; masses kg; Hubble s; Coulomb J; α_s scale GeV."
+    ),
 )
 
 
@@ -216,6 +295,11 @@ def load_alpha_fixed(path: Path | str, *, allow_empty: bool = True) -> pd.DataFr
 
 def load_geometric(path: Path | str, *, allow_empty: bool = True) -> pd.DataFrame:
     return load_csv(path, SCHEMA_GEOMETRIC, allow_empty=allow_empty)
+
+
+def load_evaluations(path: Path | str, *, allow_empty: bool = True) -> pd.DataFrame:
+    """Load EngineEvaluation CSV. Empty optional fields stay NaN; they are not filled with 0."""
+    return load_csv(path, SCHEMA_EVALUATION, allow_empty=allow_empty)
 
 
 def reject_stub_csv(kind: str) -> None:

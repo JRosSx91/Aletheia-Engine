@@ -2,6 +2,8 @@
 //!
 //! These are software records, not laboratory-validated QCD/QED.
 
+use crate::core::models::CosmicLaw;
+
 /// Results taken from the engine (existing fields/methods), with units noted in names.
 /// Not a claim of physical accuracy.
 #[derive(Debug, Clone, PartialEq)]
@@ -66,4 +68,117 @@ pub struct HeuristicBreakdown {
 pub struct EngineEvaluation {
     pub observables: ModelObservables,
     pub heuristic: HeuristicBreakdown,
+}
+
+/// Optional exploratory export. Not the historical `map` schema.
+/// Empty cells mean `None` (stage not run), never a fabricated zero.
+pub const EVALUATION_CSV_HEADERS: [&str; 30] = [
+    "sample_id",
+    "rng_seed",
+    "g_si",
+    "e_si",
+    "alpha_si",
+    "inverse_alpha_si",
+    "alpha_s_reference",
+    "alpha_s_mu_ref_gev",
+    "theoretical_proton_mass_kg",
+    "theoretical_neutron_mass_kg",
+    "theoretical_np_mass_diff_kg",
+    "theoretical_pion_mass_kg",
+    "validated_proton_mass_kg",
+    "validated_neutron_mass_kg",
+    "validated_pion_mass_kg",
+    "used_pdg_hadron_fallback",
+    "hubble_time_s",
+    "jeans_mass_kg",
+    "coulomb_barrier_j",
+    "chandrasekhar_mass_kg",
+    "nucleon_stability_gate_passed",
+    "cosmology_term",
+    "nucleosynthesis_term",
+    "stellar_term",
+    "heavy_element_term",
+    "black_hole_term",
+    "level_bonus_applied",
+    "complexity_level",
+    "fitness_uncapped",
+    "fitness",
+];
+
+fn csv_f64(x: f64) -> String {
+    if x.is_nan() {
+        "nan".to_string()
+    } else if x.is_infinite() {
+        if x.is_sign_positive() {
+            "inf".to_string()
+        } else {
+            "-inf".to_string()
+        }
+    } else {
+        format!("{:.16e}", x)
+    }
+}
+
+fn csv_opt_f64(x: Option<f64>) -> String {
+    match x {
+        Some(v) => csv_f64(v),
+        None => String::new(),
+    }
+}
+
+fn csv_bool(x: bool) -> String {
+    if x {
+        "1".to_string()
+    } else {
+        "0".to_string()
+    }
+}
+
+/// One row for the optional evaluation CSV. `rng_seed` empty when the run was unseeded.
+/// `g_si` / `e_si` are copied from the sampled `CosmicLaw`, not reconstructed from α.
+pub fn evaluation_csv_record(
+    sample_id: u64,
+    rng_seed: Option<u64>,
+    laws: &CosmicLaw,
+    ev: &EngineEvaluation,
+) -> Vec<String> {
+    let o = &ev.observables;
+    let h = &ev.heuristic;
+    let inverse = if o.alpha == 0.0 {
+        csv_f64(f64::INFINITY)
+    } else {
+        csv_f64(1.0 / o.alpha)
+    };
+    vec![
+        sample_id.to_string(),
+        rng_seed.map(|s| s.to_string()).unwrap_or_default(),
+        csv_f64(laws.g),
+        csv_f64(laws.e),
+        csv_f64(o.alpha),
+        inverse,
+        csv_f64(o.alpha_s_reference),
+        csv_f64(o.alpha_s_mu_ref_gev),
+        csv_f64(o.theoretical_proton_mass_kg),
+        csv_f64(o.theoretical_neutron_mass_kg),
+        csv_f64(o.theoretical_np_mass_diff_kg),
+        csv_f64(o.theoretical_pion_mass_kg),
+        csv_f64(o.validated_proton_mass_kg),
+        csv_f64(o.validated_neutron_mass_kg),
+        csv_f64(o.validated_pion_mass_kg),
+        csv_bool(o.used_pdg_hadron_fallback),
+        csv_opt_f64(o.hubble_time_s),
+        csv_opt_f64(o.jeans_mass_kg),
+        csv_opt_f64(o.coulomb_barrier_j),
+        csv_opt_f64(o.chandrasekhar_mass_kg),
+        csv_bool(h.nucleon_stability_gate_passed),
+        csv_opt_f64(h.cosmology_term),
+        csv_opt_f64(h.nucleosynthesis_term),
+        csv_opt_f64(h.stellar_term),
+        csv_opt_f64(h.heavy_element_term),
+        csv_opt_f64(h.black_hole_term),
+        csv_bool(h.level_bonus_applied),
+        h.complexity_level.to_string(),
+        csv_f64(h.fitness_uncapped),
+        csv_f64(h.fitness),
+    ]
 }

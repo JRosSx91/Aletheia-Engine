@@ -12,7 +12,10 @@ use super::geometric::{
 };
 use super::harmonic::run_harmonic_mode;
 use super::library::{run_library_mode_to_path, LibraryExplorer, LIBRARY_CSV_HEADERS};
-use super::map::{run_mapping_mode_to_path, sample_mapped_universe, MAP_CSV_HEADERS};
+use super::map::{
+    run_mapping_mode_to_path, run_mapping_mode_to_paths, sample_mapped_universe, MAP_CSV_HEADERS,
+};
+use crate::physics::observables::EVALUATION_CSV_HEADERS;
 use super::validate::{create_reference_universe, run_scientific_validation_mode};
 use crate::physics::alpha::{si_alpha, AlphaTrace, EmParameters};
 use crate::physics::constants::*;
@@ -189,6 +192,89 @@ fn map_csv_is_deterministic_for_fixed_seed() {
     assert_eq!(n1, csv_data_rows(&p1).len() as u64);
     assert!(n1 <= 51);
     assert_finite_csv(&p1);
+}
+
+#[test]
+fn optional_evaluation_csv_does_not_change_historical_map() {
+    let hist_a = temp_csv("map-hist-a");
+    let hist_b = temp_csv("map-hist-b");
+    let obs = temp_csv("map-obs");
+    let n_a = run_mapping_mode_to_path(20, Some(SEED_A), &hist_a).unwrap();
+    let n_b = run_mapping_mode_to_paths(20, Some(SEED_A), &hist_b, Some(&obs)).unwrap();
+    assert_eq!(n_a, n_b);
+    assert_eq!(fs::read(&hist_a).unwrap(), fs::read(&hist_b).unwrap());
+    assert_eq!(csv_headers(&obs), EVALUATION_CSV_HEADERS);
+    let rows = csv_data_rows(&obs);
+    assert_eq!(rows.len(), 21);
+    assert_eq!(rows[0][0], "0");
+    assert_eq!(rows[20][0], "20");
+    let ids: Vec<&str> = rows.iter().map(|r| r[0].as_str()).collect();
+    let mut sorted = ids.clone();
+    sorted.sort();
+    sorted.dedup();
+    assert_eq!(sorted.len(), ids.len(), "sample_id must be unique");
+    assert!(rows.iter().all(|r| r[1] == "137137"));
+    let mut rng = HarmonicRng::new(Some(SEED_A));
+    let first = sample_mapped_universe(&mut rng);
+    let ev = AdvancedPhysicsEngine::new(first.clone()).evaluate();
+    let parsed_g: f64 = rows[0][2].parse().unwrap();
+    let parsed_e: f64 = rows[0][3].parse().unwrap();
+    assert_eq!(parsed_g, first.g);
+    assert_eq!(parsed_e, first.e);
+    let parsed_fitness: f64 = rows[0][29].parse().unwrap();
+    assert_eq!(parsed_fitness, ev.heuristic.fitness);
+    assert_eq!(rows[0][27], ev.heuristic.complexity_level.to_string());
+    if ev.observables.jeans_mass_kg.is_none() {
+        assert!(rows[0][17].is_empty());
+    }
+    if ev.observables.coulomb_barrier_j.is_none() {
+        assert!(rows[0][18].is_empty());
+    }
+    if ev.observables.chandrasekhar_mass_kg.is_none() {
+        assert!(rows[0][19].is_empty());
+    }
+}
+
+#[test]
+fn evaluation_csv_keeps_none_empty_on_nucleon_gate() {
+    let mut laws = create_reference_universe();
+    laws.mass_electron = 1.0e-27;
+    let ev = AdvancedPhysicsEngine::new(laws.clone()).evaluate();
+    let row = crate::physics::observables::evaluation_csv_record(7, Some(SEED_A), &laws, &ev);
+    assert_eq!(row[0], "7");
+    assert_eq!(row[2].parse::<f64>().unwrap(), laws.g);
+    assert_eq!(row[3].parse::<f64>().unwrap(), laws.e);
+    assert!(row[16].is_empty(), "hubble must be empty when cosmology did not run");
+    assert!(row[17].is_empty());
+    assert!(row[18].is_empty());
+    assert!(row[19].is_empty());
+    assert_eq!(row[21], "");
+    assert_eq!(row[22], "");
+    assert_eq!(row[23], "");
+    assert_eq!(row[29].parse::<f64>().unwrap(), 0.0);
+}
+
+#[test]
+fn evaluation_csv_keeps_pdg_flag_and_nonfinite_tokens() {
+    let mut laws = create_reference_universe();
+    laws.alpha_s = 1.0e6;
+    let ev = AdvancedPhysicsEngine::new(laws.clone()).evaluate();
+    let row = crate::physics::observables::evaluation_csv_record(0, None, &laws, &ev);
+    assert!(row[1].is_empty());
+    assert_eq!(row[15], "1");
+    let ref_laws = create_reference_universe();
+    let nan_row = crate::physics::observables::evaluation_csv_record(
+        1,
+        None,
+        &ref_laws,
+        &{
+            let mut ev = AdvancedPhysicsEngine::new(ref_laws.clone()).evaluate();
+            ev.observables.alpha = f64::NAN;
+            ev
+        },
+    );
+    assert_eq!(nan_row[4], "nan");
+    assert_ne!(nan_row[4], "");
 }
 
 #[test]

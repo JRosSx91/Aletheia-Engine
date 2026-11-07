@@ -69,6 +69,7 @@ cargo-target/
 # Simulation / analysis outputs
 /data/
 *.csv
+backend/simulation/**/*.html
 __pycache__/
 .venv/
 venv/

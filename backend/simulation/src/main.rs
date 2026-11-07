@@ -5,6 +5,7 @@ mod utils;
 
 use clap::{Parser, Subcommand};
 use std::error::Error;
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(
@@ -25,6 +26,9 @@ enum Commands {
         /// Optional StdRng seed. Omit for historical thread_rng behaviour.
         #[arg(long)]
         rng_seed: Option<u64>,
+        /// Optional EngineEvaluation CSV. Does not change landscape_data_enhanced.csv.
+        #[arg(long)]
+        observables_csv: Option<PathBuf>,
     },
     Evolve {
         #[arg(short, long)]
@@ -75,7 +79,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         Commands::Map {
             universes,
             rng_seed,
-        } => sim_modes::map::run_mapping_mode(*universes, *rng_seed)?,
+            observables_csv,
+        } => sim_modes::map::run_mapping_mode(
+            *universes,
+            *rng_seed,
+            observables_csv.as_deref(),
+        )?,
         Commands::Evolve { seed, generations } => {
             sim_modes::evolve::run_evolutionary_mode(seed, *generations)?
         }
@@ -127,9 +136,11 @@ mod cli_parse_tests {
             Commands::Map {
                 universes,
                 rng_seed,
+                observables_csv,
             } => {
                 assert_eq!(universes, 3);
                 assert_eq!(rng_seed, Some(137137));
+                assert!(observables_csv.is_none());
             }
             _ => panic!("expected map"),
         }
@@ -158,5 +169,31 @@ mod cli_parse_tests {
         assert!(Cli::try_parse_from(["rust-universe", "alpha-fixed", "--samples", "-4"]).is_err());
         assert!(Cli::try_parse_from(["rust-universe", "map", "--rng-seed", "1.5"]).is_err());
         assert!(Cli::try_parse_from(["rust-universe", "evolve"]).is_err());
+    }
+
+    #[test]
+    fn observables_csv_flag_is_optional() {
+        let parsed = Cli::try_parse_from([
+            "rust-universe",
+            "map",
+            "--universes",
+            "2",
+            "--rng-seed",
+            "137137",
+            "--observables-csv",
+            "engine_evaluations.csv",
+        ])
+        .unwrap();
+        match parsed.command {
+            Commands::Map {
+                observables_csv, ..
+            } => {
+                assert_eq!(
+                    observables_csv.as_deref(),
+                    Some(std::path::Path::new("engine_evaluations.csv"))
+                );
+            }
+            _ => panic!("expected map"),
+        }
     }
 }

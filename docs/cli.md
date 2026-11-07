@@ -15,7 +15,7 @@ Los CSV se escriben en el **directorio de trabajo** del proceso. HAR-02 añade `
 
 | Comando | Flags (por defecto) | Salida declarada en código | Estado |
 |---|---|---|---|
-| `map` | `-u/--universes` 1_000_000, `--rng-seed` opcional | `landscape_data_enhanced.csv` | Implementado; reproducible con `--rng-seed` |
+| `map` | `-u/--universes` 1_000_000, `--rng-seed` opcional, `--observables-csv` opcional | `landscape_data_enhanced.csv`; CSV experimental solo con el flag | Implementado; reproducible con `--rng-seed` |
 | `library` | `--min-alpha 1 --max-alpha 1000 --samples-per-book 100`, `--rng-seed` opcional | `cosmic_library.csv` | Implementado; reproducible con `--rng-seed` |
 | `alpha-fixed` | `--alpha-denominator 137 --samples 10000`, `--rng-seed` opcional | `alpha_fixed_analysis.csv` | Implementado; reproducible con `--rng-seed` |
 | `geometric` | `--samples 5000`, `--rng-seed` opcional | `geometric_analysis.csv` | Parcial (geometría no entra en el fitness) |
@@ -29,6 +29,7 @@ Ejemplos (no ejecutados en la auditoría de runtime, salvo stream/lattice):
 
 ```bash
 cargo run --bin rust-universe -- map --universes 1000 --rng-seed 137137
+cargo run --bin rust-universe -- map --universes 400 --rng-seed 137137 --observables-csv engine_evaluations.csv
 cargo run --bin rust-universe -- library --min-alpha 130 --max-alpha 140 --samples-per-book 10 --rng-seed 137137
 cargo run --bin rust-universe -- alpha-fixed --alpha-denominator 137 --samples 100 --rng-seed 137137
 cargo run --bin rust-universe -- geometric --samples 50 --rng-seed 137137
@@ -39,7 +40,9 @@ cargo run --bin rust-universe -- evolve --seed genome.json --generations 10
 
 `--rng-seed <u64>` usa `rand::rngs::StdRng` (ChaCha12 en `rand` 0.8), un generador por invocación. Sin la flag, el CLI sigue usando `thread_rng()` (no reproducible). No confundir con `evolve --seed`.
 
-Semilla documentada HAR-02: `137137`.
+`--observables-csv <ruta>` **solo existe en `map`**. Escribe un segundo CSV (`EngineEvaluation` + `g_si`/`e_si` del `CosmicLaw` muestreado). No altera columnas ni el filtro de `landscape_data_enhanced.csv`. El bucle histórico es inclusivo: `--universes N` sortea **N+1** muestras (`0..=N`). El CSV experimental tiene una fila por sorteo; el histórico solo las que pasan `fitness > 0.01`.
+
+Semilla documentada HAR-02 / HAR-VIS: `137137`.
 
 `validate` no debe interpretarse como «calibración completa» (el mensaje de éxito del modo es del propio programa).
 
@@ -52,6 +55,7 @@ Guía: [analysis.md](analysis.md). Entorno aislado + `requirements-analysis.txt`
 | Script | CSV | Estado |
 |---|---|---|
 | `plot_map.py` (alias: `plot_landscape.py`, `plot_interactive.py`) | `landscape_data_enhanced.csv` | Restaurado. La columna `alpha` es 1/α |
+| `plot_observables.py` | `engine_evaluations.csv` (optativo) | Exploratorio HAR-VIS. No es validación científica |
 | `plot_library.py` | `cosmic_library.csv` | Restaurado. Marca N=137 sin privilegio físico |
 | `plot_alpha_fixed.py` | `alpha_fixed_analysis.csv` | Restaurado. Señaliza variantes ignoradas por el motor |
 | `plot_geometric.py` | `geometric_analysis.csv` | Restaurado. Advierte que la geometría no puntúa |

@@ -7,15 +7,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pandas as pd
+
 from find_adam import find_adam
 from harmonic_csv import (
     CsvSchemaError,
+    EVALUATION_COLUMNS,
     load_alpha_fixed,
+    load_evaluations,
     load_geometric,
     load_library,
     load_map,
     reject_stub_csv,
 )
+from plot_observables import plot_observables
 from plot_alpha_fixed import plot_alpha_fixed
 from plot_geometric import plot_geometric
 from plot_library import plot_library
@@ -135,6 +140,96 @@ class FindAdamTests(unittest.TestCase):
             self.assertNotIn("e", record)
             payload = json.loads(out.read_text(encoding="utf-8"))
             self.assertIn("1/α", payload["note"])
+
+
+EVAL_HEADER = ",".join(EVALUATION_COLUMNS)
+EVAL_ROW = (
+    "0,137137,6.6743000000000000e-11,1.6021766340000000e-19,7.2973525737492600e-03,1.3703599918000000e+02,1.1810000000000000e-01,"
+    "9.1187600000000000e+01,8.9223830337127490e-28,8.9457787358688820e-28,"
+    "2.3395702156133200e-30,6.0000000000000000e-28,8.9223830337127490e-28,"
+    "8.9457787358688820e-28,6.0000000000000000e-28,0,1.2340000000000000e+17,"
+    "1.0000000000000000e+32,,,1,1.0000000000000000e+00,9.7775732521619770e-01,"
+    "0.0000000000000000e+00,,,0,1,3.9443933130404940e-01,3.9443933130404940e-01"
+)
+EVAL_NONE_ROW = (
+    "3,137137,6.6743000000000000e-11,1.6021766340000000e-19,7.2973525737492600e-03,1.3703599918000000e+02,1.1810000000000000e-01,"
+    "9.1187600000000000e+01,8.9223830337127490e-28,8.9457787358688820e-28,"
+    "2.3395702156133200e-30,6.0000000000000000e-28,1.6726219236900000e-27,"
+    "1.6749274980400000e-27,2.4883541700000000e-28,1,,,,,0,,,,,,0,0,"
+    "0.0000000000000000e+00,0.0000000000000000e+00"
+)
+EVAL_NAN_ROW = (
+    "4,137137,6.6743000000000000e-11,1.6021766340000000e-19,nan,inf,1.1810000000000000e-01,9.1187600000000000e+01,"
+    "8.9223830337127490e-28,8.9457787358688820e-28,2.3395702156133200e-30,"
+    "6.0000000000000000e-28,8.9223830337127490e-28,8.9457787358688820e-28,"
+    "6.0000000000000000e-28,0,1.2340000000000000e+17,1.0000000000000000e+32,,,"
+    "1,1.0000000000000000e+00,9.7775732521619770e-01,0.0000000000000000e+00,,,"
+    "0,1,3.9443933130404940e-01,3.9443933130404940e-01"
+)
+
+
+class EvaluationCsvTests(unittest.TestCase):
+    def test_none_stays_nan_not_zero(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            path = _write(Path(raw), "ev.csv", EVAL_HEADER + "\n" + EVAL_NONE_ROW + "\n")
+            frame = load_evaluations(path)
+            self.assertEqual(len(frame), 1)
+            self.assertTrue(pd.isna(frame.loc[0, "hubble_time_s"]))
+            self.assertTrue(pd.isna(frame.loc[0, "jeans_mass_kg"]))
+            self.assertTrue(pd.isna(frame.loc[0, "coulomb_barrier_j"]))
+            self.assertTrue(pd.isna(frame.loc[0, "chandrasekhar_mass_kg"]))
+            self.assertTrue(pd.isna(frame.loc[0, "stellar_term"]))
+            self.assertEqual(frame.loc[0, "used_pdg_hadron_fallback"], 1)
+            self.assertEqual(frame.loc[0, "fitness"], 0.0)
+            self.assertNotEqual(frame.loc[0, "hubble_time_s"], 0.0)
+
+    def test_zero_stellar_is_not_none(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            path = _write(Path(raw), "ev.csv", EVAL_HEADER + "\n" + EVAL_ROW + "\n")
+            frame = load_evaluations(path)
+            self.assertEqual(frame.loc[0, "stellar_term"], 0.0)
+            self.assertFalse(pd.isna(frame.loc[0, "stellar_term"]))
+            self.assertTrue(pd.isna(frame.loc[0, "coulomb_barrier_j"]))
+            self.assertEqual(frame.loc[0, "sample_id"], 0)
+            self.assertEqual(frame.loc[0, "rng_seed"], 137137)
+            self.assertAlmostEqual(frame.loc[0, "g_si"], 6.6743e-11)
+            self.assertAlmostEqual(frame.loc[0, "e_si"], 1.602176634e-19)
+
+    def test_nonfinite_tokens(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            path = _write(Path(raw), "ev.csv", EVAL_HEADER + "\n" + EVAL_NAN_ROW + "\n")
+            frame = load_evaluations(path)
+            self.assertTrue(pd.isna(frame.loc[0, "alpha_si"]))
+            self.assertTrue(float(frame.loc[0, "inverse_alpha_si"]) == float("inf"))
+
+    def test_rejects_map_schema(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            path = _write(Path(raw), "map.csv", MAP_HEADER + "\n" + MAP_ROW + "\n")
+            with self.assertRaises(CsvSchemaError):
+                load_evaluations(path)
+
+    def test_html_figures_and_sample_card(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            path = _write(
+                tmp,
+                "ev.csv",
+                EVAL_HEADER + "\n" + EVAL_ROW + "\n" + EVAL_NONE_ROW + "\n",
+            )
+            out = tmp / "fig"
+            paths = plot_observables(path, out, seed_label="137137", sample_id=3)
+            names = {p.name for p in paths}
+            self.assertIn("obs_fitness_hist.html", names)
+            self.assertIn("obs_complexity_hist.html", names)
+            self.assertIn("obs_alpha_vs_proton.html", names)
+            self.assertIn("obs_alphas_vs_npdiff.html", names)
+            self.assertIn("obs_scatter_matrix.html", names)
+            self.assertIn("obs_sample_card.html", names)
+            self.assertIn("obs_jeans.html", names)
+            card = (out / "obs_sample_card.html").read_text(encoding="utf-8")
+            self.assertIn("sample_id=3", card)
+            for item in paths:
+                self.assertGreater(item.stat().st_size, 0)
 
 
 if __name__ == "__main__":

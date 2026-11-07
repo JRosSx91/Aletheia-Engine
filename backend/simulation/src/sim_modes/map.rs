@@ -1,6 +1,6 @@
 use crate::core::models::CosmicLaw;
-use crate::physics::alpha::si_alpha;
-use crate::physics::engine::calculate_enhanced_fitness;
+use crate::physics::engine::AdvancedPhysicsEngine;
+use crate::physics::observables::{evaluation_csv_record, EVALUATION_CSV_HEADERS};
 use crate::utils::{analyze_universe_type, HarmonicRng};
 use csv;
 use rand::Rng;
@@ -20,8 +20,22 @@ pub const MAP_CSV_HEADERS: [&str; 8] = [
 ];
 
 /// Historical loop is inclusive: `0..=num_universes` draws `num_universes + 1` samples.
-pub fn run_mapping_mode(num_universes: u64, rng_seed: Option<u64>) -> Result<(), Box<dyn Error>> {
-    run_mapping_mode_to_path(num_universes, rng_seed, Path::new(MAP_CSV_FILENAME)).map(|_| ())
+pub fn run_mapping_mode(
+    num_universes: u64,
+    rng_seed: Option<u64>,
+    observables_path: Option<&Path>,
+) -> Result<(), Box<dyn Error>> {
+    match observables_path {
+        None => run_mapping_mode_to_path(num_universes, rng_seed, Path::new(MAP_CSV_FILENAME))
+            .map(|_| ()),
+        Some(obs) => run_mapping_mode_to_paths(
+            num_universes,
+            rng_seed,
+            Path::new(MAP_CSV_FILENAME),
+            Some(obs),
+        )
+        .map(|_| ()),
+    }
 }
 
 pub fn run_mapping_mode_to_path(
@@ -29,9 +43,27 @@ pub fn run_mapping_mode_to_path(
     rng_seed: Option<u64>,
     path: &Path,
 ) -> Result<u64, Box<dyn Error>> {
+    run_mapping_mode_to_paths(num_universes, rng_seed, path, None)
+}
+
+/// Same sampler and historical `map` CSV. Optional second file is every sample's `EngineEvaluation`.
+pub fn run_mapping_mode_to_paths(
+    num_universes: u64,
+    rng_seed: Option<u64>,
+    path: &Path,
+    observables_path: Option<&Path>,
+) -> Result<u64, Box<dyn Error>> {
     let mut rng = HarmonicRng::new(rng_seed);
     let mut wtr = csv::Writer::from_path(path)?;
     wtr.write_record(MAP_CSV_HEADERS)?;
+    let mut obs_wtr = match observables_path {
+        Some(p) => {
+            let mut w = csv::Writer::from_path(p)?;
+            w.write_record(EVALUATION_CSV_HEADERS)?;
+            Some(w)
+        }
+        None => None,
+    };
 
     println!(
         "🗺️ Iniciando mapeo mejorado de {} universos...",
@@ -42,8 +74,14 @@ pub fn run_mapping_mode_to_path(
     for i in 0..=num_universes {
         let random_laws = sample_mapped_universe(&mut rng);
 
-        let (fitness, level) = calculate_enhanced_fitness(&random_laws);
-        let alpha = si_alpha(random_laws.e);
+        let ev = AdvancedPhysicsEngine::new(random_laws.clone()).evaluate();
+        let fitness = ev.heuristic.fitness;
+        let level = ev.heuristic.complexity_level;
+        let alpha = ev.observables.alpha;
+
+        if let Some(obs) = obs_wtr.as_mut() {
+            obs.write_record(&evaluation_csv_record(i, rng_seed, &random_laws, &ev))?;
+        }
 
         if fitness > 0.01 {
             let universe_type = analyze_universe_type(level);
@@ -61,7 +99,6 @@ pub fn run_mapping_mode_to_path(
         }
 
         if i > 0 && i % 100_000 == 0 {
-            let (fitness, level) = calculate_enhanced_fitness(&random_laws);
             let universe_type = analyze_universe_type(level);
             println!(
                 "Universo #{}... Fitness: {:.4}, Tipo: {}",
@@ -71,6 +108,9 @@ pub fn run_mapping_mode_to_path(
     }
 
     wtr.flush()?;
+    if let Some(mut obs) = obs_wtr {
+        obs.flush()?;
+    }
     println!("🎯 === MAPEO MEJORADO COMPLETADO ===");
     Ok(records_written)
 }
