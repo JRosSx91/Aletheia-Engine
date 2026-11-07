@@ -16,7 +16,9 @@ use super::map::{run_mapping_mode_to_path, sample_mapped_universe, MAP_CSV_HEADE
 use super::validate::{create_reference_universe, run_scientific_validation_mode};
 use crate::physics::alpha::{si_alpha, AlphaTrace, EmParameters};
 use crate::physics::constants::*;
-use crate::physics::engine::{calculate_enhanced_fitness, AdvancedPhysicsEngine};
+use crate::physics::engine::{
+    calculate_enhanced_fitness, hadron_masses_need_pdg, AdvancedPhysicsEngine,
+};
 use crate::utils::HarmonicRng;
 use std::f64::consts::PI;
 use std::fs;
@@ -797,6 +799,26 @@ fn reference_evaluation_does_not_invent_unreached_heuristic_stages() {
         ev.observables.validated_proton_mass_kg,
         ev.observables.theoretical_proton_mass_kg
     );
+    let engine = AdvancedPhysicsEngine::new(create_reference_universe());
+    let (tp, tn, tpi) = engine.get_theoretical_hadron_masses();
+    assert_eq!(ev.observables.theoretical_pion_mass_kg, tpi);
+    assert_eq!(ev.observables.validated_pion_mass_kg, tpi);
+    assert_eq!(ev.observables.theoretical_proton_mass_kg, tp);
+    assert_eq!(ev.observables.theoretical_neutron_mass_kg, tn);
+    assert!(ev.observables.hubble_time_s.is_some());
+    assert_eq!(
+        ev.observables.jeans_mass_kg,
+        Some(engine.calculate_jeans_mass())
+    );
+    assert!(
+        ev.observables.coulomb_barrier_j.is_none(),
+        "heavy stage not entered: Coulomb must stay absent, not 0"
+    );
+    assert!(
+        ev.observables.chandrasekhar_mass_kg.is_none(),
+        "BH stage not entered: Chandrasekhar must stay absent even though the public method exists"
+    );
+    assert!(engine.chandrasekhar_mass() > 0.0);
 }
 
 #[test]
@@ -813,6 +835,10 @@ fn nucleon_gate_failure_leaves_later_heuristic_terms_none() {
     assert_eq!(ev.heuristic.fitness, 0.0);
     assert_eq!(ev.heuristic.complexity_level, 0);
     assert!(!ev.heuristic.level_bonus_applied);
+    assert!(ev.observables.hubble_time_s.is_none());
+    assert!(ev.observables.jeans_mass_kg.is_none());
+    assert!(ev.observables.coulomb_barrier_j.is_none());
+    assert!(ev.observables.chandrasekhar_mass_kg.is_none());
 }
 
 #[test]
@@ -832,6 +858,13 @@ fn cosmological_cut_records_evaluated_zero_and_skips_later_stages() {
         (ev.heuristic.fitness, ev.heuristic.complexity_level),
         calculate_enhanced_fitness(&laws)
     );
+    assert!(
+        ev.observables.hubble_time_s.is_none(),
+        "freefall cut returns before Hubble; do not invent a time"
+    );
+    assert!(ev.observables.jeans_mass_kg.is_none());
+    assert!(ev.observables.coulomb_barrier_j.is_none());
+    assert!(ev.observables.chandrasekhar_mass_kg.is_none());
 }
 
 #[test]
@@ -865,18 +898,21 @@ fn invalid_theoretical_hadrons_set_pdg_flag_and_keep_theory_fields() {
     let mut laws = create_reference_universe();
     laws.alpha_s = 1.0e6;
     let engine = AdvancedPhysicsEngine::new(laws);
-    let (tp, tn, _) = engine.get_theoretical_hadron_masses();
+    let (tp, tn, tpi) = engine.get_theoretical_hadron_masses();
     assert!(
         tp <= 0.0 || tn <= tp || tp > 2e-26 || tn > 2e-26,
         "alpha_s=1e6 must trip the existing validity cut, got m_p={tp} m_n={tn}"
     );
     let ev = engine.evaluate();
-    let (ep, en, _) = engine.get_empirical_hadron_masses();
+    let (ep, en, epi) = engine.get_empirical_hadron_masses();
     assert!(ev.observables.used_pdg_hadron_fallback);
     assert_eq!(ev.observables.theoretical_proton_mass_kg, tp);
     assert_eq!(ev.observables.theoretical_neutron_mass_kg, tn);
     assert_eq!(ev.observables.validated_proton_mass_kg, ep);
     assert_eq!(ev.observables.validated_neutron_mass_kg, en);
+    assert_eq!(ev.observables.theoretical_pion_mass_kg, tpi);
+    assert_eq!(ev.observables.validated_pion_mass_kg, epi);
+    assert_ne!(tpi, epi);
 }
 
 #[test]
@@ -914,4 +950,192 @@ fn evaluate_preserves_iso_alpha_abc_split() {
         (ec.heuristic.fitness, ec.heuristic.complexity_level),
         iso.c.compute_enhanced_fitness()
     );
+    assert_eq!(
+        ea.observables.theoretical_pion_mass_kg,
+        eb.observables.theoretical_pion_mass_kg
+    );
+    assert_ne!(
+        ea.observables.theoretical_pion_mass_kg,
+        ec.observables.theoretical_pion_mass_kg
+    );
+    assert_eq!(ea.observables.hubble_time_s, eb.observables.hubble_time_s);
+    assert_eq!(ea.observables.hubble_time_s, ec.observables.hubble_time_s);
+    assert_eq!(ea.observables.jeans_mass_kg, eb.observables.jeans_mass_kg);
+    assert_ne!(ea.observables.jeans_mass_kg, ec.observables.jeans_mass_kg);
+    assert!(ea.observables.coulomb_barrier_j.is_none());
+    assert!(eb.observables.coulomb_barrier_j.is_none());
+    assert!(ec.observables.coulomb_barrier_j.is_none());
+    assert!(ea.observables.chandrasekhar_mass_kg.is_none());
+    assert!(eb.observables.chandrasekhar_mass_kg.is_none());
+    assert!(ec.observables.chandrasekhar_mass_kg.is_none());
+    assert_eq!(ea.heuristic.stellar_term, Some(0.0));
+    assert_eq!(ec.heuristic.stellar_term, Some(0.0));
+}
+
+#[test]
+fn hubble_cut_records_time_but_skips_later_stages() {
+    let mut laws = create_reference_universe();
+    laws.dark_energy_density = 1.0;
+    let ev = AdvancedPhysicsEngine::new(laws.clone()).evaluate();
+    assert_eq!(ev.heuristic.cosmology_term, Some(0.0));
+    assert!(ev.observables.hubble_time_s.is_some());
+    let expected =
+        (3.0 / (8.0 * PI * laws.g * laws.dark_energy_density)).sqrt();
+    assert_eq!(ev.observables.hubble_time_s, Some(expected));
+    assert!(ev.heuristic.nucleosynthesis_term.is_none());
+    assert!(ev.observables.jeans_mass_kg.is_none());
+    assert_eq!(
+        (ev.heuristic.fitness, ev.heuristic.complexity_level),
+        calculate_enhanced_fitness(&laws)
+    );
+}
+
+#[test]
+fn resolve_and_validated_hadrons_stay_equivalent() {
+    let cases = [
+        create_reference_universe(),
+        {
+            let mut laws = create_reference_universe();
+            laws.alpha_s = 1.0e6;
+            laws
+        },
+    ];
+    for laws in cases {
+        let engine = AdvancedPhysicsEngine::new(laws);
+        let ev = engine.evaluate();
+        let validated = engine.get_validated_hadron_masses();
+        assert_eq!(
+            (
+                ev.observables.validated_proton_mass_kg,
+                ev.observables.validated_neutron_mass_kg,
+                ev.observables.validated_pion_mass_kg
+            ),
+            validated
+        );
+        let theoretical = engine.get_theoretical_hadron_masses();
+        assert_eq!(
+            (
+                ev.observables.theoretical_proton_mass_kg,
+                ev.observables.theoretical_neutron_mass_kg,
+                ev.observables.theoretical_pion_mass_kg
+            ),
+            theoretical
+        );
+        let (m_p, m_n, _) = theoretical;
+        let expect_pdg = cfg!(feature = "empirical_validation") || hadron_masses_need_pdg(m_p, m_n);
+        assert_eq!(ev.observables.used_pdg_hadron_fallback, expect_pdg);
+    }
+}
+
+#[test]
+fn heavy_stage_captures_coulomb_without_inventing_chandrasekhar() {
+    let mut rng = HarmonicRng::new(Some(SEED_A));
+    let mut found = false;
+    for _ in 0..256 {
+        let laws = sample_mapped_universe(&mut rng);
+        let engine = AdvancedPhysicsEngine::new(laws.clone());
+        let ev = engine.evaluate();
+        if ev.heuristic.heavy_element_term.is_none() {
+            continue;
+        }
+        found = true;
+        assert_eq!(
+            ev.observables.coulomb_barrier_j,
+            Some(engine.coulomb_barrier_energy())
+        );
+        if ev.heuristic.black_hole_term.is_none() {
+            assert!(ev.observables.chandrasekhar_mass_kg.is_none());
+        } else {
+            assert_eq!(
+                ev.observables.chandrasekhar_mass_kg,
+                Some(engine.chandrasekhar_mass())
+            );
+        }
+        assert_eq!(
+            (ev.heuristic.fitness, ev.heuristic.complexity_level),
+            calculate_enhanced_fitness(&laws)
+        );
+        break;
+    }
+    assert!(
+        found,
+        "expected a seed-137137 map sample that enters the heavy-element stage"
+    );
+}
+
+#[test]
+fn hadron_pdg_predicate_covers_each_historical_condition() {
+    let cap = 2e-26;
+    let m_p = 1.0e-27;
+    let m_n = 1.1e-27;
+    assert!(!hadron_masses_need_pdg(m_p, m_n), "ordinary theoretical pair");
+
+    assert!(hadron_masses_need_pdg(0.0, m_n), "m_p <= 0 at zero");
+    assert!(hadron_masses_need_pdg(-1.0e-31, m_n), "m_p <= 0 when negative");
+    assert!(hadron_masses_need_pdg(m_p, m_p), "m_n <= m_p when equal");
+    assert!(hadron_masses_need_pdg(m_p, m_p - 1.0e-40), "m_n <= m_p when lighter");
+    assert!(hadron_masses_need_pdg(cap + 1.0e-40, cap + 2.0e-40), "m_p > 2e-26");
+    assert!(hadron_masses_need_pdg(m_p, cap + 1.0e-40), "m_n > 2e-26");
+}
+
+#[test]
+fn hadron_pdg_predicate_boundaries_use_historical_operators() {
+    let cap = 2e-26;
+    assert!(hadron_masses_need_pdg(0.0, 1.0e-27), "m_p <= 0 includes 0");
+    assert!(!hadron_masses_need_pdg(
+        f64::MIN_POSITIVE,
+        2.0 * f64::MIN_POSITIVE
+    ));
+    assert!(hadron_masses_need_pdg(1.0e-27, 1.0e-27), "m_n <= m_p includes equality");
+    assert!(!hadron_masses_need_pdg(1.0e-27, 1.0e-27 * 1.000001));
+    assert!(
+        !hadron_masses_need_pdg(cap * 0.5, cap),
+        "cap uses '>' so m_n == 2e-26 is still accepted"
+    );
+    assert!(hadron_masses_need_pdg(cap, cap), "equal masses at the cap still fail m_n <= m_p");
+    assert!(hadron_masses_need_pdg(cap * 1.1, cap * 1.2));
+    assert!(hadron_masses_need_pdg(1.0e-28, cap * 1.1));
+}
+
+#[test]
+fn hadron_pdg_predicate_documents_ieee_nonfinite_behaviour() {
+    // Historical `||` of IEEE comparisons: NaN compared with `<`, `<=`, `>` is false.
+    assert!(
+        !hadron_masses_need_pdg(f64::NAN, 1.0e-27),
+        "NaN m_p does not take the PDG arm; documented, not a new policy"
+    );
+    assert!(
+        !hadron_masses_need_pdg(1.0e-27, f64::NAN),
+        "NaN m_n does not take the PDG arm; documented, not a new policy"
+    );
+    assert!(hadron_masses_need_pdg(f64::INFINITY, f64::INFINITY + 1.0));
+    assert!(hadron_masses_need_pdg(f64::NEG_INFINITY, 1.0e-27));
+}
+
+#[cfg(feature = "empirical_validation")]
+#[test]
+fn empirical_validation_forces_pdg_even_on_reference() {
+    let engine = AdvancedPhysicsEngine::new(create_reference_universe());
+    let ev = engine.evaluate();
+    let theoretical = engine.get_theoretical_hadron_masses();
+    let empirical = engine.get_empirical_hadron_masses();
+    assert!(ev.observables.used_pdg_hadron_fallback);
+    assert_eq!(
+        (
+            ev.observables.theoretical_proton_mass_kg,
+            ev.observables.theoretical_neutron_mass_kg,
+            ev.observables.theoretical_pion_mass_kg
+        ),
+        theoretical
+    );
+    assert_eq!(
+        (
+            ev.observables.validated_proton_mass_kg,
+            ev.observables.validated_neutron_mass_kg,
+            ev.observables.validated_pion_mass_kg
+        ),
+        empirical
+    );
+    assert_eq!(engine.get_validated_hadron_masses(), empirical);
+    assert_ne!(theoretical, empirical);
 }

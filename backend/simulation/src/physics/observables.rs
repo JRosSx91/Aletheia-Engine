@@ -22,9 +22,22 @@ pub struct ModelObservables {
     pub validated_proton_mass_kg: f64,
     /// From `get_validated_hadron_masses`. kg.
     pub validated_neutron_mass_kg: f64,
+    /// Third element of the theoretical hadron tuple. kg.
+    pub theoretical_pion_mass_kg: f64,
+    /// Third element of the validated hadron tuple (theoretical or PDG). kg.
+    pub validated_pion_mass_kg: f64,
     /// True when `get_validated_hadron_masses` took the empirical/PDG arm
     /// (`empirical_validation` or the theoretical validity cut), not inferred from mass equality.
     pub used_pdg_hadron_fallback: bool,
+    /// `hubble_time_approx` inside cosmology, seconds. `None` if that line did not run
+    /// (nucleon gate, or freefall cut returning before Hubble).
+    pub hubble_time_s: Option<f64>,
+    /// Jeans mass used by the stellar stage. kg. `None` if that stage was not entered.
+    pub jeans_mass_kg: Option<f64>,
+    /// Coulomb barrier used by the heavy-element stage. J. `None` if that stage was not entered.
+    pub coulomb_barrier_j: Option<f64>,
+    /// Chandrasekhar mass used by the black-hole stage. kg. `None` if that stage was not entered.
+    pub chandrasekhar_mass_kg: Option<f64>,
 }
 
 /// Historical ranking pieces. `fitness` is an index, not a physical observable.

@@ -205,7 +205,7 @@ impl AdvancedPhysicsEngine {
         } else {
             let theoretical = self.get_theoretical_hadron_masses();
             let (m_p, m_n, _) = theoretical;
-            if m_p <= 0.0 || m_n <= m_p || m_p > 2e-26 || m_n > 2e-26 {
+            if hadron_masses_need_pdg(m_p, m_n) {
                 self.get_empirical_hadron_masses()
             } else {
                 theoretical
@@ -213,23 +213,27 @@ impl AdvancedPhysicsEngine {
         }
     }
 
-    pub fn cosmological_viability(&self) -> f64 {
+    /// Historical cosmology score. Hubble time is recorded only if that line actually ran.
+    fn cosmological_viability_details(&self) -> (f64, Option<f64>) {
     
     let density_approx = 1e-26; // Densidad aproximada tras la inflación
     let freefall_time = (1.0 / (self.laws.g * density_approx)).sqrt();
     
     if freefall_time < (1e8 * 31557600.0) {
-        return 0.0;
+        return (0.0, None);
     }
 
     let hubble_time_approx = (3.0 / (8.0 * PI * self.laws.g * self.laws.dark_energy_density)).sqrt();
     
     if hubble_time_approx < (1e8 * 31557600.0) {
-        return 0.0;
+        return (0.0, Some(hubble_time_approx));
     }
     
-    1.0
+    (1.0, Some(hubble_time_approx))
 }
+    pub fn cosmological_viability(&self) -> f64 {
+        self.cosmological_viability_details().0
+    }
     pub fn nuclear_cross_section(&self, reaction_type: &str) -> f64 {
         let (m_proton, _, _) = self.get_validated_hadron_masses();
         let thermal_energy = K_B * 1e9; // BBN temperature ~1 GK
@@ -307,10 +311,11 @@ impl AdvancedPhysicsEngine {
         fundamental_scale / (mu_e.powi(2) * (2.0_f64).sqrt())
     }
 
-    pub fn stellar_formation_epoch(&self) -> f64 {
+    /// Historical stellar score plus the Jeans mass already computed for that score.
+    fn stellar_formation_details(&self) -> (f64, f64) {
         let jeans_mass = self.calculate_jeans_mass();
         if jeans_mass <= 0.0 {
-            return 0.0;
+            return (0.0, jeans_mass);
         }
         
         let stellar_lifetime = self.main_sequence_lifetime(jeans_mass);
@@ -319,14 +324,18 @@ impl AdvancedPhysicsEngine {
         let maximum_lifetime = 1e11 * 365.25 * 24.0 * 3600.0; // 100 Gyr
         
         if stellar_lifetime < minimum_lifetime {
-            return 0.0;
+            return (0.0, jeans_mass);
         }
         
         if stellar_lifetime > maximum_lifetime {
-            return (maximum_lifetime / stellar_lifetime).sqrt();
+            return ((maximum_lifetime / stellar_lifetime).sqrt(), jeans_mass);
         }
 
-        1.0
+        (1.0, jeans_mass)
+    }
+
+    pub fn stellar_formation_epoch(&self) -> f64 {
+        self.stellar_formation_details().0
     }
 
     /// Coulomb barrier used by `heavy_element_creation` (r ~ 10 fm). Same ε₀ as α.
@@ -334,7 +343,8 @@ impl AdvancedPhysicsEngine {
         (2.0 * 4.0 * self.laws.e.powi(2)) / (4.0 * PI * self.em_epsilon_0 * 1e-14)
     }
 
-    pub fn heavy_element_creation(&self) -> f64 {
+    /// Historical heavy-element score plus the Coulomb barrier already computed for that score.
+    fn heavy_element_details(&self) -> (f64, f64) {
     let core_temp = 1.5e8; // 150 MK
     let thermal_energy_joules = K_B * core_temp;
 
@@ -353,13 +363,18 @@ impl AdvancedPhysicsEngine {
     let alpha_s_optimal = 0.118;
     let alpha_s_score = (-((self.laws.alpha_s - alpha_s_optimal).powi(2) / (alpha_s_optimal * 0.05).powi(2))).exp();
     
-    (reaction_rate_score * alpha_s_score).min(1.0)
+    ((reaction_rate_score * alpha_s_score).min(1.0), coulomb_barrier_energy)
 }
 
-    pub fn black_hole_formation_potential(&self) -> f64 {
+    pub fn heavy_element_creation(&self) -> f64 {
+        self.heavy_element_details().0
+    }
+
+    /// Historical BH score plus the Chandrasekhar mass already computed for that score.
+    fn black_hole_details(&self) -> (f64, f64) {
         let chandrasekhar = self.chandrasekhar_mass();
         if chandrasekhar <= 0.0 {
-            return 0.0;
+            return (0.0, chandrasekhar);
         }
         
         let tov_limit = chandrasekhar * 2.5;
@@ -368,13 +383,18 @@ impl AdvancedPhysicsEngine {
         let typical_massive_star = 25.0 * solar_mass;
 
         if tov_limit < typical_massive_star {
-            1.0 
+            (1.0, chandrasekhar)
         } else {
-            (typical_massive_star / tov_limit).powf(1.5)
+            ((typical_massive_star / tov_limit).powf(1.5), chandrasekhar)
         }
     }
 
+    pub fn black_hole_formation_potential(&self) -> f64 {
+        self.black_hole_details().0
+    }
+
     /// Same decision as `get_validated_hadron_masses`, plus the theoretical tuple from that walk.
+    /// Later fitness stages still call `get_validated_hadron_masses` (historical call counts).
     fn resolve_hadron_masses(&self) -> ((f64, f64, f64), (f64, f64, f64), bool) {
         if cfg!(feature = "empirical_validation") {
             (
@@ -385,7 +405,7 @@ impl AdvancedPhysicsEngine {
         } else {
             let theoretical = self.get_theoretical_hadron_masses();
             let (m_p, m_n, _) = theoretical;
-            if m_p <= 0.0 || m_n <= m_p || m_p > 2e-26 || m_n > 2e-26 {
+            if hadron_masses_need_pdg(m_p, m_n) {
                 (theoretical, self.get_empirical_hadron_masses(), true)
             } else {
                 (theoretical, theoretical, false)
@@ -396,7 +416,7 @@ impl AdvancedPhysicsEngine {
     /// Same heuristic walk as `calculate_enhanced_fitness`, recording stages actually entered.
     pub(crate) fn evaluate(&self) -> EngineEvaluation {
         let (theoretical, validated, used_pdg_hadron_fallback) = self.resolve_hadron_masses();
-        let (mass_proton, mass_neutron, _) = validated;
+        let (mass_proton, mass_neutron, mass_pion) = validated;
         let nucleon_ok =
             !(mass_proton >= mass_neutron || mass_proton + self.laws.mass_electron >= mass_neutron);
 
@@ -405,13 +425,18 @@ impl AdvancedPhysicsEngine {
         let mut stellar_term = None;
         let mut heavy_element_term = None;
         let mut black_hole_term = None;
+        let mut hubble_time_s = None;
+        let mut jeans_mass_kg = None;
+        let mut coulomb_barrier_j = None;
+        let mut chandrasekhar_mass_kg = None;
         let mut level_bonus_applied = false;
         let mut complexity_level = 0u8;
         let mut fitness = 0.0;
 
         if nucleon_ok {
-            let cosmic_viability = self.cosmological_viability();
+            let (cosmic_viability, hubble) = self.cosmological_viability_details();
             cosmology_term = Some(cosmic_viability);
+            hubble_time_s = hubble;
             if cosmic_viability >= 0.1 {
                 fitness += 0.15 * cosmic_viability;
 
@@ -422,22 +447,25 @@ impl AdvancedPhysicsEngine {
                 if nucleosynthesis_score > 0.3 {
                     complexity_level = 1;
 
-                    let stellar_score = self.stellar_formation_epoch();
+                    let (stellar_score, jeans) = self.stellar_formation_details();
                     stellar_term = Some(stellar_score);
+                    jeans_mass_kg = Some(jeans);
                     fitness += 0.25 * stellar_score;
 
                     if stellar_score > 0.4 {
                         complexity_level = 2;
 
-                        let heavy_elements_score = self.heavy_element_creation();
+                        let (heavy_elements_score, coulomb) = self.heavy_element_details();
                         heavy_element_term = Some(heavy_elements_score);
+                        coulomb_barrier_j = Some(coulomb);
                         fitness += 0.20 * heavy_elements_score;
 
                         if heavy_elements_score > 0.5 {
                             complexity_level = 3;
 
-                            let black_hole_score = self.black_hole_formation_potential();
+                            let (black_hole_score, m_ch) = self.black_hole_details();
                             black_hole_term = Some(black_hole_score);
+                            chandrasekhar_mass_kg = Some(m_ch);
                             fitness += 0.15 * black_hole_score;
 
                             if black_hole_score > 0.6 {
@@ -457,7 +485,7 @@ impl AdvancedPhysicsEngine {
 
         let fitness_uncapped = fitness;
         let fitness_capped = fitness.min(1.0);
-        let (tp, tn, _) = theoretical;
+        let (tp, tn, tpi) = theoretical;
         let observables = ModelObservables {
             alpha: self.alpha,
             alpha_s_reference: self.alpha_s_reference,
@@ -467,7 +495,13 @@ impl AdvancedPhysicsEngine {
             theoretical_np_mass_diff_kg: tn - tp,
             validated_proton_mass_kg: mass_proton,
             validated_neutron_mass_kg: mass_neutron,
+            theoretical_pion_mass_kg: tpi,
+            validated_pion_mass_kg: mass_pion,
             used_pdg_hadron_fallback,
+            hubble_time_s,
+            jeans_mass_kg,
+            coulomb_barrier_j,
+            chandrasekhar_mass_kg,
         };
 
         EngineEvaluation {
@@ -496,4 +530,10 @@ impl AdvancedPhysicsEngine {
 
 pub fn calculate_enhanced_fitness(laws: &CosmicLaw) -> (f64, u8) {
     AdvancedPhysicsEngine::new(laws.clone()).compute_enhanced_fitness()
+}
+
+/// Historical PDG-substitution cut on theoretical nucleon masses (kg).
+/// IEEE NaN comparisons are all false, so NaN currently does *not* take this arm.
+pub(crate) fn hadron_masses_need_pdg(m_p: f64, m_n: f64) -> bool {
+    m_p <= 0.0 || m_n <= m_p || m_p > 2e-26 || m_n > 2e-26
 }
