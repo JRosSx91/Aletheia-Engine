@@ -1,6 +1,8 @@
 # HAR-EVO-01 — Primer optimizador experimental de universos (H-03)
 
-**Fase 01A:** diseño **cerrado** (decisiones de genoma, RNG, control y CLI). Sin código en este cierre.
+**Fase:** HAR-EVO-01A diseño + 01B implementación + 01C QA, **cerrado**.
+
+El **runner experimental** (`sim_modes/evo01.rs`) existe. El comando público **`evolve` permanece stub** (`println!`). No está terminado el modo CLI.
 
 **HEAD de partida:** `547188af211ece68662172a57c30c4500cdf5904` (HAR-EXP-03).
 
@@ -266,3 +268,48 @@ Pendiente explícito: ejecutar o no la corrida ampliada; no bloquea 01B.
 ## 11. Qué no hace 01A
 
 No implementa `evolve`. No cambia ecuaciones, fitness, gates ni muestreo `map`. No PHYS-01, PRIME-01, H-04, `DimensionlessLaw`, React ni bases de datos.
+
+---
+
+## 12. Implementación HAR-EVO-01B (en revisión, sin commit)
+
+Código: `sim_modes/evo01.rs`, `evo01_regression.rs`, `scripts/plot_evo01.py`, loaders en `harmonic_csv.py`. CLI `evolve` **sigue stub**. Motor `new()` Historical. `map` no cambia.
+
+Fondo: `create_reference_universe()`. Init: `e`, `g`, `alpha_s` uniformes como `map`; `alpha=si_alpha(e)`; `gamma=g/G_N`. Mutación log-normal σ=0.05 sobre los tres genes. Clamp `next_down(hi)`. Semillas SplitMix64 desde 137137, flujos 0/1/2. Z de mutación indexada `(generación destino, slot)` idéntica en ambos brazos.
+
+Corrida principal: N=100, T=30, k=2, E=0. Salida fuera de Git: `C:\Users\igomez\Desktop\labs\labs\Aletheia-Engine-har-evo01-runs\`.
+
+### 12.1 Resultados (índice interno)
+
+Gen 0 idéntico: mejor 0.6435, mediana 0.3094; niveles 0.24 / 0.73 / 0.03 / 0 / 0 / 0.
+
+| Generación | Brazo | Mejor | Mediana | Diversidad | Borde | Niveles 0/1/2/3/4/5 |
+|---|---|---:|---:|---:|---:|---|
+| 10 | selección | 1.000 | 0.648 | 0.255 | 0.66 | 0 / 0.18 / 0.79 / 0 / 0 / 0.03 |
+| 10 | control | 0.639 | 0.323 | 0.513 | 0.14 | 0.20 / 0.79 / 0.01 / 0 / 0 / 0 |
+| 30 | selección | **1.000** | 0.661 | 0.117 | 0.63 | 0 / 0.15 / 0.59 / 0 / 0.03 / **0.23** |
+| 30 | control | 0.649 | 0.326 | 0.529 | 0.21 | 0.24 / 0.73 / 0.03 / 0 / 0 / 0 |
+
+Al final, selección: 91 % con γ>9; 87 % con |α_s−0.118|<0.02. El mejor (nivel 5, fitness 1) tiene α≈0.00838, α_s≈0.121, γ≈9.90. Control: concentración de padres = 1 (un progenitor por slot); diversidad no colapsa.
+
+Esto **confirma el artefacto EXP-03**: el torneo empuja al techo de G y a la gaussiana de α_s. No es habitabilidad. El control no muestra esa convergencia.
+
+Cero evaluaciones `skipped` / no finitas en esta corrida. Genealogía: gen 0 sin `parent_id`; padres del control = mismo slot de t−1.
+
+Figuras: `evo01_fitness_sel_vs_ctrl.html`, `evo01_genes.html`, `evo01_levels.html`, `evo01_diversity_bounds.html`, `evo01_genealogy.html`.
+
+### 12.2 Tests
+
+96 tests Rust activos (el test de escritura ignorado se sustituyó por directorios temporales con `Drop` y replay bitwise); 22 Python. 16 warnings históricos. Hashes VIS-01 intactos. `harmonic_and_evolve_remain_stubs` verde.
+
+**Reproducibilidad 01C (dos corridas independientes, semilla 137137, N=100, T=30):** SHA-256 idénticos.
+
+| Archivo | SHA-256 |
+|---|---|
+| `evo01_individuals.csv` | `BE5D4841…F226D748` |
+| `evo01_metrics.csv` | `079A3AE9…C5BA10BA` |
+| `evo01_summary.json` | `2D0AFC55…48DC77F7` |
+
+El JSON no lleva rutas ni marcas de tiempo. `fitness=1` es saturación de `min(1)` en la heurística, no habitabilidad. Una sola semilla **no** es evidencia estadística general.
+
+Corrida N=200, T=100 no ejecutada (opcional). HAR-EVO-01 **cerrado** como optimizador experimental. CLI `evolve` **no** cerrado.

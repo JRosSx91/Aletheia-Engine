@@ -13,10 +13,14 @@ from find_adam import find_adam
 from harmonic_csv import (
     CsvSchemaError,
     EVALUATION_COLUMNS,
+    EVO01_INDIVIDUAL_COLUMNS,
+    EVO01_METRIC_COLUMNS,
     EXP03_GATE_COLUMNS,
     RUNNING_COMPARE_COLUMNS,
     load_alpha_fixed,
     load_evaluations,
+    load_evo01_individuals,
+    load_evo01_metrics,
     load_exp03_gates,
     load_geometric,
     load_library,
@@ -24,6 +28,7 @@ from harmonic_csv import (
     load_running_compare,
     reject_stub_csv,
 )
+from plot_evo01 import plot_evo01
 from plot_alphas_bifurcation import SCAN_COLUMNS, plot_alphas_bifurcation
 from plot_alphas_propagation import PROPAGATION_COLUMNS, plot_alphas_propagation
 from plot_running_compare import plot_running_compare
@@ -398,6 +403,105 @@ class Exp03PlotTests(unittest.TestCase):
             ad = paths["ad"].read_text(encoding="utf-8")
             self.assertTrue("219" in ad)
             self.assertNotIn("habitabilidad física demostrada", text)
+
+
+E1I = ",".join(EVO01_INDIVIDUAL_COLUMNS)
+E1M = ",".join(EVO01_METRIC_COLUMNS)
+
+
+def _e1_ind(arm: str, gen: str, uid: str, parent: str, slot: str, fit: str, level: str) -> str:
+    return ",".join(
+        [
+            "evo01-n2-t1-base137137",
+            arm,
+            gen,
+            uid,
+            parent,
+            slot,
+            "7.2970000000000000e-03",
+            "1.1800000000000000e-01",
+            "2.0000000000000000e+00",
+            "1.6020000000000000e-19",
+            "1.3340000000000000e-10",
+            fit,
+            level,
+            "ok",
+            "1.0000000000000000e+00",
+            "",
+            "",
+        ]
+    )
+
+
+def _e1_met(arm: str, gen: str, best: str, med: str, div: str, border: str) -> str:
+    return ",".join(
+        [
+            "evo01-n2-t1-base137137",
+            arm,
+            gen,
+            best,
+            med,
+            "1.0000000000000000e-01",
+            "4.0000000000000000e-01",
+            "3.0000000000000000e-01",
+            "0.0000000000000000e+00",
+            "5.0000000000000000e-01",
+            "5.0000000000000000e-01",
+            "0.0000000000000000e+00",
+            "0.0000000000000000e+00",
+            "0.0000000000000000e+00",
+            div,
+            "2.0000000000000000e-01",
+            border,
+            "0.0000000000000000e+00",
+            "1.0000000000000000e+00",
+            "5.0000000000000000e-01",
+        ]
+    )
+
+
+class Evo01PlotTests(unittest.TestCase):
+    def test_loader_keeps_empty_parent_id(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            rows = [
+                _e1_ind("selection", "0", "0", "", "0", "0.2", "1"),
+                _e1_ind("selection", "0", "1", "", "1", "0.3", "1"),
+            ]
+            path = _write(tmp, "ind.csv", E1I + "\n" + "\n".join(rows) + "\n")
+            frame = load_evo01_individuals(path)
+            self.assertTrue(pd.isna(frame.loc[0, "parent_id"]))
+            self.assertEqual(frame.loc[0, "arm"], "selection")
+
+    def test_five_html_not_habitability(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            inds = [
+                _e1_ind("selection", "0", "0", "", "0", "0.20", "1"),
+                _e1_ind("selection", "0", "1", "", "1", "0.30", "1"),
+                _e1_ind("selection", "1", "268435456", "0", "0", "0.40", "2"),
+                _e1_ind("selection", "1", "268435457", "1", "1", "0.50", "2"),
+                _e1_ind("control", "0", "72057594037927936", "", "0", "0.20", "1"),
+                _e1_ind("control", "0", "72057594037927937", "", "1", "0.30", "1"),
+                _e1_ind("control", "1", "72339069014638592", "72057594037927936", "0", "0.25", "1"),
+                _e1_ind("control", "1", "72339069014638593", "72057594037927937", "1", "0.28", "1"),
+            ]
+            mets = [
+                _e1_met("selection", "0", "0.30", "0.25", "0.10", "0.00"),
+                _e1_met("selection", "1", "0.50", "0.45", "0.08", "0.20"),
+                _e1_met("control", "0", "0.30", "0.25", "0.10", "0.00"),
+                _e1_met("control", "1", "0.28", "0.26", "0.09", "0.10"),
+            ]
+            ind_p = _write(tmp, "evo01_individuals.csv", E1I + "\n" + "\n".join(inds) + "\n")
+            met_p = _write(tmp, "evo01_metrics.csv", E1M + "\n" + "\n".join(mets) + "\n")
+            out = tmp / "figs"
+            paths = plot_evo01(ind_p, met_p, out)
+            self.assertEqual(len(paths), 5)
+            text = paths["fitness"].read_text(encoding="utf-8")
+            self.assertIn("HAR-EVO-01", text)
+            self.assertIn("selection", text)
+            self.assertNotIn("habitabilidad física demostrada", text)
+            self.assertIn("alpha_s", paths["genes"].read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

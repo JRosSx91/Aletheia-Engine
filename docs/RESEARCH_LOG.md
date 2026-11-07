@@ -131,12 +131,23 @@ Estados de revisión: **cerrado** (commit local), **histórico** (pre-Harmonic o
 
 ---
 
+## HAR-EVO-01 — Optimizador experimental (H-03)
+
+- **Pregunta.** ¿Un GA mínimo con el índice interno se aparta de un control sin selección bajo el mismo ruido de mutación?
+- **Método.** Genoma `alpha`, `alpha_s`, `gamma=G/G_N`; init como `map` (`e` y `g` uniformes); torneo k=2; E=0; σ=0.05 log-normal; Z indexada `(generación, slot)`; motor A. N=100, T=30, semilla 137137. Control: mismo slot, sin leer fitness.
+- **Datos.** `Aletheia-Engine-har-evo01-runs\` (fuera de Git). SHA-256 individuos `BE5D4841…F226D748`.
+- **Resultado.** Gen 0 idéntico (mejor 0.6435, mediana 0.3094). Selección gen 30: mejor 1.0 (saturación heurística), mediana 0.661, 23 % nivel 5, 91 % γ>9, 87 % α_s cerca de 0.118, diversidad 0.51→0.12. Control: mejor 0.649, mediana 0.326, padres 1.0/slot. Confirma el artefacto EXP-03, no cosmología.
+- **Limitaciones.** Una semilla. `gamma` no es α_g. CLI `evolve` sigue stub. No es Smolin ni habitabilidad.
+- **Informe.** [HAR_EVO_01.md](HAR_EVO_01.md).
+- **Revisión.** Cerrado en HAR-EVO-01C.
+
+---
+
 ## Propuestos (no ejecutados)
 
 Orden: [ROADMAP.md](ROADMAP.md) §6.
 
 | Id | Pregunta breve |
 |---|---|
-| HAR-EVO-01 | Primer optimizador experimental (no Smolin) |
 | HAR-PHYS-01 | ¿Se acota o cambia `running_alpha_s`? Opcional; no bloquea lo anterior |
 | HAR-PRIME-01 | Primos vs compuestos cuando α = 1/N sea coherente |

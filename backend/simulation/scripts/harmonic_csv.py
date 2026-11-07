@@ -415,6 +415,80 @@ def load_exp03_gates(path: Path | str, *, allow_empty: bool = True) -> pd.DataFr
     return load_csv(path, SCHEMA_EXP03_GATE, allow_empty=allow_empty)
 
 
+EVO01_INDIVIDUAL_COLUMNS = [
+    "run_id",
+    "arm",
+    "generation",
+    "universe_id",
+    "parent_id",
+    "slot",
+    "alpha",
+    "alpha_s",
+    "gamma",
+    "e_si",
+    "g_si",
+    "fitness",
+    "complexity_level",
+    "eval_status",
+    "mutation_effective",
+    "clamped_genes",
+    "discard_reason",
+]
+EVO01_INDIVIDUAL_NUMERIC = [
+    c
+    for c in EVO01_INDIVIDUAL_COLUMNS
+    if c not in ("run_id", "arm", "eval_status", "clamped_genes", "discard_reason")
+]
+SCHEMA_EVO01_INDIVIDUAL = Schema(
+    name="evo01-individuals",
+    columns=tuple(EVO01_INDIVIDUAL_COLUMNS),
+    numeric=tuple(EVO01_INDIVIDUAL_NUMERIC),
+    notes=(
+        "HAR-EVO-01 individuals. parent_id empty on generation 0. "
+        "fitness is an internal index, not habitability. Not a CLI evolve file."
+    ),
+)
+EVO01_METRIC_COLUMNS = [
+    "run_id",
+    "arm",
+    "generation",
+    "best_fitness",
+    "median_fitness",
+    "q1_fitness",
+    "q3_fitness",
+    "iqr_fitness",
+    "frac_level_0",
+    "frac_level_1",
+    "frac_level_2",
+    "frac_level_3",
+    "frac_level_4",
+    "frac_level_5",
+    "diversity",
+    "mean_dist_to_bounds",
+    "frac_near_border",
+    "frac_mutations_clamped",
+    "mutation_rate_effective",
+    "parent_concentration",
+]
+EVO01_METRIC_NUMERIC = [c for c in EVO01_METRIC_COLUMNS if c not in ("run_id", "arm")]
+SCHEMA_EVO01_METRIC = Schema(
+    name="evo01-metrics",
+    columns=tuple(EVO01_METRIC_COLUMNS),
+    numeric=tuple(EVO01_METRIC_NUMERIC),
+    notes="HAR-EVO-01 per-generation metrics. Diversity is Euclidean in log-normalized [0,1]³.",
+)
+
+
+def load_evo01_individuals(path: Path | str, *, allow_empty: bool = True) -> pd.DataFrame:
+    """Load HAR-EVO-01 individual CSV. Empty parent_id stays NaN."""
+    return load_csv(path, SCHEMA_EVO01_INDIVIDUAL, allow_empty=allow_empty)
+
+
+def load_evo01_metrics(path: Path | str, *, allow_empty: bool = True) -> pd.DataFrame:
+    """Load HAR-EVO-01 generation-metric CSV."""
+    return load_csv(path, SCHEMA_EVO01_METRIC, allow_empty=allow_empty)
+
+
 def reject_stub_csv(kind: str) -> None:
     raise FileNotFoundError(
         f"El modo `{kind}` es un stub: el CLI no escribe CSV. "

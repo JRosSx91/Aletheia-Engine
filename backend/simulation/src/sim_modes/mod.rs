@@ -10,6 +10,10 @@ pub mod stream;
 pub mod validate;
 
 #[cfg(test)]
+mod evo01;
+#[cfg(test)]
+mod evo01_regression;
+#[cfg(test)]
 mod exp03_gates;
 #[cfg(test)]
 mod exp03_regression;
